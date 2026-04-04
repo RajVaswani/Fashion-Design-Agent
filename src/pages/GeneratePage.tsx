@@ -78,6 +78,7 @@ const GeneratePage = () => {
   const [masterPrompt, setMasterPrompt] = useState("");
   const [conceptRefTab, setConceptRefTab] = useState<"collections" | "moodboard">("collections");
   const [moodBoardRefs, setMoodBoardRefs] = useState<{ src: string; annotations: { id: string; text: string; x: number; y: number }[] }[]>([]);
+  const [focusedDesignId, setFocusedDesignId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
