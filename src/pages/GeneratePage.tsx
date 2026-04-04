@@ -157,6 +157,8 @@ const GeneratePage = () => {
   const handlePromoteSelected = async () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
+    setSelectedTags([]); // Clear tags for new stage
+    if (nextStage === "realistic") setOutputStyle("realistic");
     if (projectId) {
       try { await projectsApi.updateStatus(projectId, nextStage); } catch (err) { console.error(err); }
     }
