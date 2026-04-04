@@ -12,3 +12,11 @@ export interface GalleryImage {
   annotations: Annotation[];
   selected?: boolean;
 }
+
+export interface Collection {
+  id: string;
+  name: string;
+  description?: string;
+  images: GalleryImage[];
+  createdAt: string;
+}
