@@ -410,6 +410,7 @@ const GeneratePage = () => {
               selectable={stage !== "realistic"}
               onToggleSelect={toggleDesignSelect}
               onPromoteSelected={handlePromoteSelected}
+              onUpdateNotes={handleUpdateNotes}
             />
           </div>
         </div>
