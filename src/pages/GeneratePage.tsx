@@ -179,7 +179,7 @@ const GeneratePage = () => {
         body: {
           prompt: prompt.trim(),
           referenceImages: imageUrls,
-          annotationContext,
+          annotationContext: fullAnnotationContext,
           stage,
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
