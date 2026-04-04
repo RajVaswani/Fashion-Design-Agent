@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2, Trash2, Wand2 } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2, Trash2, Wand2, Target } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,8 @@ interface DesignResultsProps {
   onUpdateNotes?: (id: string, notes: string) => void;
   onDeleteDesign?: (id: string) => void;
   onEnhanceDesign?: (id: string, enhancePrompt: string) => void;
+  onFocusDesign?: (id: string) => void;
+  focusedDesignId?: string | null;
   isGenerating?: boolean;
 }
 
