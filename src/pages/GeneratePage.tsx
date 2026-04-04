@@ -122,6 +122,12 @@ const GeneratePage = () => {
     }
   };
 
+  const handleUpdateNotes = (id: string, notes: string) => {
+    setDesigns((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, notes } : d))
+    );
+  };
+
   const handlePromoteSelected = async () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
@@ -155,6 +161,14 @@ const GeneratePage = () => {
       }
       const annotationContext = annotationParts.join("\n");
 
+      // Build design notes from selected previous-stage designs
+      const designNotes = selectedPrevDesigns
+        .filter((d) => d.notes && d.notes.trim().length > 0)
+        .map((d) => `Design note: ${d.notes}`)
+        .join("\n");
+
+      const fullAnnotationContext = [annotationContext, designNotes].filter(Boolean).join("\n\n");
+
       // Prioritize: previous stage designs first (they are the base), then ref images for brand context
       const imageUrls = [
         ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
@@ -165,7 +179,7 @@ const GeneratePage = () => {
         body: {
           prompt: prompt.trim(),
           referenceImages: imageUrls,
-          annotationContext,
+          annotationContext: fullAnnotationContext,
           stage,
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
@@ -396,6 +410,7 @@ const GeneratePage = () => {
               selectable={stage !== "realistic"}
               onToggleSelect={toggleDesignSelect}
               onPromoteSelected={handlePromoteSelected}
+              onUpdateNotes={handleUpdateNotes}
             />
           </div>
         </div>

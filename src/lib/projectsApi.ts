@@ -37,6 +37,7 @@ export const projectsApi = {
         prompt: d.prompt,
         stage: d.stage as DesignStage,
         selected: d.selected,
+        notes: (d as any).notes || "",
       });
       desByProject.set(d.project_id, list);
     }
@@ -76,6 +77,7 @@ export const projectsApi = {
         prompt: d.prompt,
         stage: d.stage as DesignStage,
         selected: d.selected,
+        notes: (d as any).notes || "",
       })),
     };
   },
@@ -159,6 +161,14 @@ export const projectsApi = {
     const { error } = await supabase
       .from("project_designs")
       .update({ selected })
+      .eq("id", designId);
+    if (error) throw error;
+  },
+
+  async updateDesignNotes(designId: string, notes: string): Promise<void> {
+    const { error } = await supabase
+      .from("project_designs")
+      .update({ notes } as any)
       .eq("id", designId);
     if (error) throw error;
   },

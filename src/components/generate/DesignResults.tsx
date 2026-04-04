@@ -1,6 +1,7 @@
-import { useState } from "react";
-import { Sparkles, Download, Check, X, ZoomIn } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
+import { projectsApi } from "@/lib/projectsApi";
 
 interface DesignResultsProps {
   designs: GeneratedDesign[];
@@ -8,6 +9,7 @@ interface DesignResultsProps {
   selectable: boolean;
   onToggleSelect: (id: string) => void;
   onPromoteSelected: () => void;
+  onUpdateNotes?: (id: string, notes: string) => void;
 }
 
 const stageLabels: Record<DesignStage, string> = {
@@ -22,11 +24,31 @@ const DesignResults = ({
   selectable,
   onToggleSelect,
   onPromoteSelected,
+  onUpdateNotes,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [noteText, setNoteText] = useState("");
+
   const stageDesigns = designs.filter((d) => d.stage === stage);
   const selectedCount = stageDesigns.filter((d) => d.selected).length;
   const nextStage: DesignStage | null = stage === "concept" ? "design" : stage === "design" ? "realistic" : null;
+
+  const openNoteEditor = (design: GeneratedDesign) => {
+    setEditingNoteId(design.id);
+    setNoteText(design.notes || "");
+  };
+
+  const saveNote = useCallback(async () => {
+    if (!editingNoteId) return;
+    onUpdateNotes?.(editingNoteId, noteText);
+    try {
+      await projectsApi.updateDesignNotes(editingNoteId, noteText);
+    } catch (err) {
+      console.error("Failed to save note", err);
+    }
+    setEditingNoteId(null);
+  }, [editingNoteId, noteText, onUpdateNotes]);
 
   if (stageDesigns.length === 0) {
     return (
@@ -46,7 +68,6 @@ const DesignResults = ({
   return (
     <>
       <div className="space-y-3">
-        {/* Selection summary bar */}
         {selectable && (
           <div className="flex items-center justify-between bg-card border border-border rounded-lg px-3 py-2">
             <span className="text-xs text-muted-foreground font-body">
@@ -67,12 +88,12 @@ const DesignResults = ({
           {stageDesigns.map((item) => (
             <div
               key={item.id}
-              className={`group relative rounded-lg overflow-hidden border bg-card animate-fade-in transition-all cursor-pointer ${
+              className={`group relative rounded-lg overflow-hidden border bg-card animate-fade-in transition-all ${
                 item.selected ? "border-primary ring-1 ring-primary/30" : "border-border"
               }`}
             >
               <div
-                className="aspect-[3/4] relative"
+                className="aspect-[3/4] relative cursor-pointer"
                 onClick={() => setPreviewUrl(item.url)}
               >
                 <img
@@ -83,17 +104,12 @@ const DesignResults = ({
                     (e.target as HTMLImageElement).src = "/placeholder.svg";
                   }}
                 />
-                {/* Zoom overlay */}
                 <div className="absolute inset-0 bg-background/0 group-hover:bg-background/20 transition-colors flex items-center justify-center">
                   <ZoomIn className="w-6 h-6 text-foreground opacity-0 group-hover:opacity-70 transition-opacity" />
                 </div>
-                {/* Select checkbox */}
                 {selectable && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onToggleSelect(item.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onToggleSelect(item.id); }}
                     className={`absolute top-2 right-2 w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all z-10 ${
                       item.selected
                         ? "bg-primary border-primary"
@@ -103,24 +119,98 @@ const DesignResults = ({
                     {item.selected && <Check className="w-3.5 h-3.5 text-primary-foreground" />}
                   </button>
                 )}
+                {/* Note indicator */}
+                {item.notes && (
+                  <div className="absolute top-2 left-2 z-10">
+                    <div className="w-5 h-5 rounded-full bg-accent flex items-center justify-center">
+                      <StickyNote className="w-3 h-3 text-accent-foreground" />
+                    </div>
+                  </div>
+                )}
               </div>
-              <div className="p-2 flex items-center justify-between">
-                <span className="text-xs text-muted-foreground truncate font-body max-w-[80%]">
-                  {item.prompt}
-                </span>
-                <a
-                  href={item.url}
-                  download={`design-${item.id}.png`}
-                  className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <Download className="w-3.5 h-3.5" />
-                </a>
+
+              {/* Footer with prompt, note button, download */}
+              <div className="p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground truncate font-body max-w-[60%]">
+                    {item.prompt}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); openNoteEditor(item); }}
+                      className={`p-1 transition-colors ${item.notes ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                      title="Add refinement notes"
+                    >
+                      <StickyNote className="w-3.5 h-3.5" />
+                    </button>
+                    <a
+                      href={item.url}
+                      download={`design-${item.id}.png`}
+                      className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </a>
+                  </div>
+                </div>
+                {/* Show note preview if exists */}
+                {item.notes && (
+                  <p
+                    className="text-[10px] text-accent-foreground/70 bg-accent/30 rounded px-1.5 py-0.5 line-clamp-2 cursor-pointer font-body"
+                    onClick={() => openNoteEditor(item)}
+                  >
+                    {item.notes}
+                  </p>
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
+
+      {/* Note editor modal */}
+      {editingNoteId && (
+        <div
+          className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={saveNote}
+        >
+          <div
+            className="bg-card border border-border rounded-xl p-4 w-full max-w-md space-y-3 animate-fade-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-display font-bold text-foreground">Refinement Notes</h3>
+              <button onClick={saveNote} className="p-1 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <p className="text-[11px] text-muted-foreground font-body">
+              Add notes about what to change, improve, or keep. These will be sent as instructions to the AI in the next stage.
+            </p>
+            <textarea
+              autoFocus
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              placeholder="e.g. Make the neckline deeper, change fabric to silk, keep the sleeve length..."
+              className="w-full h-32 bg-secondary border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
+            />
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => { setNoteText(""); setEditingNoteId(null); }}
+                className="px-3 py-1.5 rounded-md border border-border text-xs font-body text-muted-foreground hover:text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveNote}
+                className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-body font-medium hover:bg-primary/90"
+              >
+                Save Note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Lightbox preview */}
       {previewUrl && (
