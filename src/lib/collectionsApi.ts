@@ -3,52 +3,44 @@ import type { Collection, GalleryImage, Annotation } from "@/types/gallery";
 
 export const collectionsApi = {
   async list(): Promise<Collection[]> {
-    const { data: cols, error } = await supabase
-      .from("collections")
-      .select("*")
-      .order("created_at", { ascending: false });
-    if (error) throw error;
+    // Fetch all data in 3 parallel queries instead of N+1
+    const [colsRes, imgsRes, annsRes] = await Promise.all([
+      supabase.from("collections").select("*").order("created_at", { ascending: false }),
+      supabase.from("collection_images").select("*").order("created_at", { ascending: true }),
+      supabase.from("image_annotations").select("*"),
+    ]);
 
-    // Fetch images + annotations for each collection
-    const collections: Collection[] = [];
-    for (const col of cols || []) {
-      const { data: imgs } = await supabase
-        .from("collection_images")
-        .select("*")
-        .eq("collection_id", col.id)
-        .order("created_at", { ascending: true });
+    if (colsRes.error) throw colsRes.error;
 
-      const images: GalleryImage[] = [];
-      for (const img of imgs || []) {
-        const { data: anns } = await supabase
-          .from("image_annotations")
-          .select("*")
-          .eq("image_id", img.id);
-
-        images.push({
-          id: img.id,
-          src: img.src,
-          name: img.name,
-          selected: img.selected,
-          annotations: (anns || []).map((a) => ({
-            id: a.id,
-            text: a.text,
-            x: a.x,
-            y: a.y,
-          })),
-        });
-      }
-
-      collections.push({
-        id: col.id,
-        name: col.name,
-        description: col.description || undefined,
-        images,
-        createdAt: col.created_at,
-      });
+    // Index annotations by image_id
+    const annsByImage = new Map<string, Annotation[]>();
+    for (const a of annsRes.data || []) {
+      const list = annsByImage.get(a.image_id) || [];
+      list.push({ id: a.id, text: a.text, x: a.x, y: a.y });
+      annsByImage.set(a.image_id, list);
     }
 
-    return collections;
+    // Index images by collection_id
+    const imgsByCollection = new Map<string, GalleryImage[]>();
+    for (const img of imgsRes.data || []) {
+      const list = imgsByCollection.get(img.collection_id) || [];
+      list.push({
+        id: img.id,
+        src: img.src,
+        name: img.name,
+        selected: img.selected,
+        annotations: annsByImage.get(img.id) || [],
+      });
+      imgsByCollection.set(img.collection_id, list);
+    }
+
+    return (colsRes.data || []).map((col) => ({
+      id: col.id,
+      name: col.name,
+      description: col.description || undefined,
+      images: imgsByCollection.get(col.id) || [],
+      createdAt: col.created_at,
+    }));
   },
 
   async create(name: string, description?: string): Promise<Collection> {
@@ -140,26 +132,24 @@ export const collectionsApi = {
       .select("*")
       .eq("collection_id", collectionId);
 
-    const images: GalleryImage[] = [];
-    for (const img of imgs || []) {
-      const { data: anns } = await supabase
-        .from("image_annotations")
-        .select("*")
-        .eq("image_id", img.id);
+    const imageIds = (imgs || []).map((i) => i.id);
+    const { data: allAnns } = imageIds.length > 0
+      ? await supabase.from("image_annotations").select("*").in("image_id", imageIds)
+      : { data: [] };
 
-      images.push({
-        id: img.id,
-        src: img.src,
-        name: img.name,
-        selected: img.selected,
-        annotations: (anns || []).map((a) => ({
-          id: a.id,
-          text: a.text,
-          x: a.x,
-          y: a.y,
-        })),
-      });
+    const annsByImage = new Map<string, Annotation[]>();
+    for (const a of allAnns || []) {
+      const list = annsByImage.get(a.image_id) || [];
+      list.push({ id: a.id, text: a.text, x: a.x, y: a.y });
+      annsByImage.set(a.image_id, list);
     }
-    return images;
+
+    return (imgs || []).map((img) => ({
+      id: img.id,
+      src: img.src,
+      name: img.name,
+      selected: img.selected,
+      annotations: annsByImage.get(img.id) || [],
+    }));
   },
 };
