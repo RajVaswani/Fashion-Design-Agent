@@ -217,14 +217,18 @@ const GeneratePage = () => {
   };
 
   const handlePromoteSelected = async () => {
-    const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
+    const nextStage: DesignStage = stage === "concept" ? "design" : stage === "design" ? "realistic" : "moodboard";
     setStage(nextStage);
-    setSelectedTags([]); // Clear tags for new stage
+    setSelectedTags([]);
     if (nextStage === "realistic") setOutputStyle("realistic");
     if (projectId) {
       try { await projectsApi.updateStatus(projectId, nextStage); } catch (err) { console.error(err); }
     }
-    toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
+    if (nextStage === "moodboard") {
+      toast.success("Ready to generate your mood board PDF!");
+    } else {
+      toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
+    }
   };
 
   const handleGenerate = async () => {
