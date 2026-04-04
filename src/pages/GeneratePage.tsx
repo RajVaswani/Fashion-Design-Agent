@@ -680,11 +680,14 @@ const GeneratePage = () => {
           </div>
 
           <div className="space-y-4">
-            {/* Focused design panel — shown when user clicks a shortlisted image */}
+            {/* Focused design panel — shown when user clicks a shortlisted image or a current-stage design */}
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
-              const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
-              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
+              const allCandidates = [
+                ...designs.filter((d) => d.stage === prevStage && d.selected),
+                ...designs.filter((d) => d.stage === stage),
+              ];
+              const focusedDesign = focusedDesignId ? allCandidates.find((d) => d.id === focusedDesignId) : null;
               if (!focusedDesign) return null;
               return (
                 <div className="border border-primary/30 rounded-xl bg-card p-3 space-y-2 animate-fade-in">
