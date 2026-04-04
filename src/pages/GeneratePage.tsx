@@ -728,6 +728,8 @@ const GeneratePage = () => {
               onUpdateNotes={handleUpdateNotes}
               onDeleteDesign={handleDeleteDesign}
               onEnhanceDesign={handleEnhanceDesign}
+              onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
+              focusedDesignId={focusedDesignId}
               isGenerating={isGenerating}
             />
           </div>
