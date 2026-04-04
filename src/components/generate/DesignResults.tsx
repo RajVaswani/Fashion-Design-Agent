@@ -183,6 +183,7 @@ const DesignResults = ({
                       <Download className="w-3.5 h-3.5" />
                     </a>
                   </div>
+                </div>
                 {/* Show note preview if exists */}
                 {item.notes && (
                   <p
@@ -197,6 +198,43 @@ const DesignResults = ({
           ))}
         </div>
       </div>
+
+      {/* Citation viewer modal */}
+      {viewingCitationId && (() => {
+        const citationDesign = designs.find(d => d.id === viewingCitationId);
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setViewingCitationId(null)}
+          >
+            <div
+              className="bg-card border border-border rounded-xl p-4 w-full max-w-md space-y-3 animate-fade-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-display font-bold text-foreground flex items-center gap-1.5">
+                  <FileText className="w-4 h-4 text-primary" />
+                  Design Citation
+                </h3>
+                <button onClick={() => setViewingCitationId(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <p className="text-xs text-muted-foreground font-body leading-relaxed whitespace-pre-wrap">
+                {citationDesign?.citation || "No citation available."}
+              </p>
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setViewingCitationId(null)}
+                  className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-body font-medium hover:bg-primary/90"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Note editor modal */}
       {editingNoteId && (
