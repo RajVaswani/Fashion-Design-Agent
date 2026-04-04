@@ -1,0 +1,1 @@
+ALTER TABLE public.project_designs ADD COLUMN citation text DEFAULT '';

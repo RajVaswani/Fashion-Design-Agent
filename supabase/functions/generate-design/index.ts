@@ -16,39 +16,73 @@ const strengthDescriptions: Record<string, string> = {
 const stageSystemPrompts: Record<string, string> = {
   concept: `You are an expert fashion designer AI. Your task is to generate clothing design CONCEPTS.
 
-CRITICAL RULES FOR REFERENCE ADHERENCE:
-- You MUST study every reference image provided and extract: silhouette shape, proportions, color palette, fabric textures, construction details, and styling.
-- Your generated designs MUST maintain the same overall aesthetic, brand DNA, and design language visible in the references.
-- The garment TYPE must match what is described in the prompt — do NOT change it to a different garment.
-- Proportions (sleeve length, hem length, fit tightness, shoulder width) must be realistic and consistent with the references.
-- If annotations are provided, they contain specific design notes from the brand's collection — treat them as mandatory requirements.
+PROMPT HIERARCHY (follow strictly):
+1. **Project Theme (Master Prompt)** = The overarching brand narrative, mood, and aesthetic guardrails. ALL designs must feel like they belong in this theme.
+2. **Design Prompt** = The specific focus for THIS look. This is what makes this design unique within the theme.
+3. **Reference Images** = Visual anchors. Follow them based on the Reference Strength level provided.
+4. **Style Tags & Annotations** = Additional attributes to incorporate.
 
-OUTPUT STYLE: Fashion illustration — bold, expressive, clear design communication. Show the garment from a front 3/4 angle. Multiple variations encouraged but all must stay within the design language of the references.`,
+CRITICAL RULES:
+- The garment TYPE must match the design prompt — do NOT change it.
+- Proportions must be realistic and consistent with references.
+- Stay within the project theme at all times.
+
+OUTPUT STYLE: Fashion illustration — bold, expressive, clear design communication.
+
+CITATION (MANDATORY): After generating the image, you MUST write a brief citation explaining:
+- How the project theme influenced the design
+- What specific elements came from the design prompt
+- Which reference images influenced the silhouette, color, or details
+- Which style tags were applied
+Format: Start with "**Design Citation:**" followed by 2-4 sentences.`,
 
   design: `You are an expert fashion designer AI. Your task is to REFINE and detail a selected clothing design.
 
-CRITICAL RULES FOR REFERENCE ADHERENCE:
-- The reference images are SELECTED CONCEPTS from the previous stage — you MUST use them as the direct base.
-- Do NOT change the fundamental silhouette, garment type, or proportions from the reference designs.
-- ONLY modify what the user explicitly asks to change in their refinement prompt.
-- Add detail: fabric texture, stitching, seams, darts, closures, embellishments, pattern placement.
-- Maintain the exact color palette unless the user asks to change it.
-- The output should look like a detailed technical fashion sketch or flat with clear construction details.
-- Keep proportions anatomically correct and garment-appropriate.
+PROMPT HIERARCHY (follow strictly):
+1. **Project Theme** = Guardrails — the design must stay within this aesthetic.
+2. **Design Prompt** = Specific refinements to make to the selected concepts.
+3. **Reference Images** = The selected concepts ARE your base. Do NOT change the fundamental silhouette unless asked.
+4. **Design Notes** = Per-design annotations from the user about what to change.
 
-OUTPUT STYLE: Detailed fashion design sketch / technical flat. Show construction lines, fabric grain, button/zip placement, topstitching.`,
+CRITICAL RULES:
+- ONLY modify what the user explicitly asks to change.
+- Add detail: fabric texture, stitching, seams, closures, embellishments.
+- Maintain the project theme throughout.
+
+OUTPUT STYLE: Detailed fashion design sketch / technical flat.
+
+CITATION (MANDATORY): After generating, write a brief citation explaining:
+- What was kept from the original concept and why
+- What specific changes were made per the refinement prompt
+- How the project theme guided decisions
+Format: Start with "**Design Citation:**" followed by 2-4 sentences.`,
 
   realistic: `You are an expert fashion designer AI. Your task is to create a PHOTOREALISTIC product render.
 
-CRITICAL RULES FOR REFERENCE ADHERENCE:
-- The reference images are REFINED DESIGNS — reproduce them exactly as a real garment.
-- Do NOT alter the design, silhouette, proportions, colors, or details in ANY way.
-- Show the garment on a model in a professional studio or e-commerce setting.
-- The output must look like a real product photograph or lookbook image.
-- Fabric should look physically accurate (silk should drape, denim should be rigid, knit should have texture).
-- Lighting should be professional studio lighting.
+PROMPT HIERARCHY (follow strictly):
+1. **Project Theme** = The mood, setting, and brand story for the photo.
+2. **Design Prompt** = Specific styling, model, or photography direction.
+3. **Reference Images** = The refined designs — reproduce them EXACTLY as real garments.
 
-OUTPUT STYLE: Professional e-commerce / lookbook photography. Clean background, proper model proportions, real fabric behavior.`,
+CRITICAL RULES:
+- Do NOT alter the design, silhouette, proportions, colors, or details.
+- Fabric should look physically accurate.
+- Lighting and setting should reflect the project theme.
+
+OUTPUT STYLE: Professional e-commerce / lookbook photography.
+
+CITATION (MANDATORY): After generating, write a brief citation explaining:
+- How the project theme influenced the photography style and setting
+- How faithfully the design was reproduced
+- Any styling choices made for the photoshoot
+Format: Start with "**Design Citation:**" followed by 2-4 sentences.`,
+};
+
+const outputStyleDescriptions: Record<string, string> = {
+  sketch: "Output as a hand-drawn fashion sketch/illustration with pencil or ink style linework, expressive strokes, and fashion figure proportions.",
+  "flat-2d": "Output as a clean 2D technical flat / spec drawing. Show the garment laid flat with precise construction lines, no model, white background, front and back views if possible.",
+  "3d-model": "Output as a 3D rendered garment on a mannequin or dress form. Show realistic fabric drape and form with studio lighting, no human model.",
+  realistic: "Output as a photorealistic image of the garment worn by a model in a professional studio or e-commerce setting.",
 };
 
 serve(async (req) => {
@@ -92,31 +126,27 @@ serve(async (req) => {
     const systemPrompt = stageSystemPrompts[stage] || stageSystemPrompts.concept;
     const strengthInstruction = strengthDescriptions[referenceStrength] || strengthDescriptions.high;
 
-    // Build rich user message
-    const outputStyleDescriptions: Record<string, string> = {
-      sketch: "Output as a hand-drawn fashion sketch/illustration with pencil or ink style linework, expressive strokes, and fashion figure proportions.",
-      "flat-2d": "Output as a clean 2D technical flat / spec drawing. Show the garment laid flat with precise construction lines, no model, white background, front and back views if possible.",
-      "3d-model": "Output as a 3D rendered garment on a mannequin or dress form. Show realistic fabric drape and form with studio lighting, no human model.",
-      realistic: "Output as a photorealistic image of the garment worn by a model in a professional studio or e-commerce setting.",
-    };
+    // Build structured user message with clear hierarchy
+    let userText = "";
 
-    let userText = `## Output Style\n${outputStyleDescriptions[outputStyle] || outputStyleDescriptions.sketch}\n\n`;
     if (masterPrompt) {
-      userText += `## Project Theme (MUST inform all design decisions)\n${masterPrompt}\n\n`;
+      userText += `## 1. PROJECT THEME (Master Prompt — guardrails for ALL designs)\n${masterPrompt}\n\n`;
     }
-    userText += `## Reference Strength\n${strengthInstruction}\n\n`;
-    userText += `## Design Prompt\n${prompt}\n`;
+
+    userText += `## 2. OUTPUT STYLE\n${outputStyleDescriptions[outputStyle] || outputStyleDescriptions.sketch}\n\n`;
+    userText += `## 3. DESIGN PROMPT (focus of this specific look)\n${prompt}\n\n`;
+    userText += `## 4. REFERENCE STRENGTH\n${strengthInstruction}\n`;
 
     if (styleTags.length > 0) {
-      userText += `\n## Style Tags (incorporate these attributes)\n${styleTags.join(", ")}\n`;
+      userText += `\n## 5. STYLE TAGS (incorporate these attributes)\n${styleTags.join(", ")}\n`;
     }
 
     if (annotationContext) {
-      userText += `\n## Brand Collection Notes (MUST follow these)\n${annotationContext}\n`;
+      userText += `\n## 6. DESIGN NOTES & ANNOTATIONS (MUST follow)\n${annotationContext}\n`;
     }
 
     if (referenceImages && Array.isArray(referenceImages) && referenceImages.length > 0) {
-      userText += `\n## Reference Images\nI am providing ${referenceImages.length} reference image(s). Study them carefully and follow the rules above.`;
+      userText += `\n## 7. REFERENCE IMAGES\nI am providing ${referenceImages.length} reference image(s). Study them carefully and follow the hierarchy above.`;
     }
 
     const content: any[] = [{ type: "text", text: userText }];

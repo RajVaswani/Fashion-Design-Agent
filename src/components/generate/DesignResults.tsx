@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
 
@@ -153,6 +153,18 @@ const DesignResults = ({
                     </a>
                   </div>
                 </div>
+                {/* Show citation if exists */}
+                {item.citation && (
+                  <details className="group/citation">
+                    <summary className="flex items-center gap-1 text-[10px] text-primary/70 cursor-pointer hover:text-primary font-body">
+                      <FileText className="w-3 h-3" />
+                      Design Citation
+                    </summary>
+                    <p className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-1 mt-1 font-body leading-relaxed">
+                      {item.citation}
+                    </p>
+                  </details>
+                )}
                 {/* Show note preview if exists */}
                 {item.notes && (
                   <p
