@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import AiImproveButton from "@/components/AiImproveButton";
 import { Plus, FolderKanban, Loader2, Trash2, ChevronRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
