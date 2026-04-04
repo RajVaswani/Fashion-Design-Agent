@@ -231,7 +231,7 @@ const GeneratePage = () => {
     const previousStage: DesignStage | null = stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
     const selectedPrevDesigns = previousStage ? designs.filter((d) => d.stage === previousStage && d.selected) : [];
 
-    if (stage === "concept" && selectedRefs.length === 0) { toast.error("Select at least one reference collection"); return; }
+    if (stage === "concept" && selectedRefs.length === 0 && moodBoardRefs.length === 0) { toast.error("Select at least one reference (collection or mood board)"); return; }
     if (stage !== "concept" && selectedPrevDesigns.length === 0 && selectedRefs.length === 0) { toast.error("Select designs from the previous stage"); return; }
 
     setIsGenerating(true);
@@ -246,6 +246,15 @@ const GeneratePage = () => {
           );
         }
       }
+
+      // Add mood board annotations
+      for (const mb of moodBoardRefs) {
+        if (mb.annotations.length > 0) {
+          annotationParts.push(
+            `Mood board page: ${mb.annotations.map((a) => a.text).join("; ")}`
+          );
+        }
+      }
       const annotationContext = annotationParts.join("\n");
 
       // Build design notes from selected previous-stage designs
@@ -256,9 +265,10 @@ const GeneratePage = () => {
 
       const fullAnnotationContext = [annotationContext, designNotes].filter(Boolean).join("\n\n");
 
-      // Prioritize: previous stage designs first (they are the base), then ref images for brand context
+      // Prioritize: previous stage designs first, then mood board refs, then collection refs
       const imageUrls = [
         ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+        ...moodBoardRefs.slice(0, 4).map((mb) => mb.src),
         ...selectedRefs.slice(0, 4).map((img) => img.src),
       ].slice(0, 8);
 
