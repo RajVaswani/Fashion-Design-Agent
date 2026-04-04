@@ -13,6 +13,18 @@ import { projectsApi, type Project } from "@/lib/projectsApi";
 import type { GalleryImage, Collection, DesignStage, GeneratedDesign } from "@/types/gallery";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { Slider } from "@/components/ui/slider";
+
+const STYLE_TAGS = [
+  "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
+  "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
+  "Silk", "Denim", "Wool", "Leather", "Cotton", "Linen",
+  "Neutral tones", "Bold colors", "Monochrome", "Pastel", "Earth tones",
+  "Embroidered", "Pleated", "Ruffled", "Cut-out", "Asymmetric",
+];
+
+const strengthLabels = ["Low", "Medium", "High"];
+const strengthValues = ["low", "medium", "high"];
 
 const stagePromptHints: Record<DesignStage, string> = {
   concept: "Describe the clothing design concept… e.g. 'A flowing silk evening gown with geometric Art Deco patterns in emerald green'",
@@ -35,7 +47,10 @@ const GeneratePage = () => {
   const [loadingCollections, setLoadingCollections] = useState(true);
   const [loadingProject, setLoadingProject] = useState(!!projectId);
 
-  // Load project if we have an ID
+  // Style controls
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [strengthIndex, setStrengthIndex] = useState(2); // default High
+
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
     projectsApi.get(projectId).then((p) => {
@@ -50,7 +65,6 @@ const GeneratePage = () => {
     });
   }, [projectId, navigate]);
 
-  // Load collections
   useEffect(() => {
     collectionsApi.list().then((data) => {
       setCollections(data);
@@ -58,7 +72,6 @@ const GeneratePage = () => {
     }).catch(() => setLoadingCollections(false));
   }, []);
 
-  // Build reference images from selected collections
   useEffect(() => {
     const imgs: GalleryImage[] = [];
     for (const id of selectedCollectionIds) {
@@ -73,14 +86,10 @@ const GeneratePage = () => {
     setSelectedCollectionIds((prev) =>
       isRemoving ? prev.filter((x) => x !== id) : [...prev, id]
     );
-    // Persist link to project
     if (projectId) {
       try {
-        if (isRemoving) {
-          await projectsApi.unlinkCollection(projectId, id);
-        } else {
-          await projectsApi.linkCollection(projectId, id);
-        }
+        if (isRemoving) await projectsApi.unlinkCollection(projectId, id);
+        else await projectsApi.linkCollection(projectId, id);
       } catch (err) {
         console.error("Failed to update project collections", err);
       }
@@ -90,6 +99,12 @@ const GeneratePage = () => {
   const toggleRefImage = (id: string) => {
     setReferenceImages((prev) =>
       prev.map((img) => (img.id === id ? { ...img, selected: !img.selected } : img))
+    );
+  };
+
+  const toggleTag = (tag: string) => {
+    setSelectedTags((prev) =>
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
     );
   };
 
@@ -111,11 +126,7 @@ const GeneratePage = () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
     if (projectId) {
-      try {
-        await projectsApi.updateStatus(projectId, nextStage);
-      } catch (err) {
-        console.error(err);
-      }
+      try { await projectsApi.updateStatus(projectId, nextStage); } catch (err) { console.error(err); }
     }
     toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
   };
@@ -132,18 +143,33 @@ const GeneratePage = () => {
 
     setIsGenerating(true);
     try {
-      const annotationContext = selectedRefs
-        .flatMap((img) => img.annotations.map((a) => a.text))
-        .filter((t) => t.length > 0)
-        .join("; ");
+      // Build structured annotation context
+      const annotationParts: string[] = [];
+      for (const img of selectedRefs) {
+        const imgAnnotations = img.annotations.filter((a) => a.text.length > 0);
+        if (imgAnnotations.length > 0) {
+          annotationParts.push(
+            `Image "${img.name}": ${imgAnnotations.map((a) => a.text).join("; ")}`
+          );
+        }
+      }
+      const annotationContext = annotationParts.join("\n");
 
+      // Prioritize: previous stage designs first (they are the base), then ref images for brand context
       const imageUrls = [
-        ...selectedRefs.slice(0, 4).map((img) => img.src),
         ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+        ...selectedRefs.slice(0, 4).map((img) => img.src),
       ].slice(0, 8);
 
       const { data, error } = await supabase.functions.invoke("generate-design", {
-        body: { prompt: prompt.trim(), referenceImages: imageUrls, annotationContext, stage },
+        body: {
+          prompt: prompt.trim(),
+          referenceImages: imageUrls,
+          annotationContext,
+          stage,
+          styleTags: selectedTags,
+          referenceStrength: strengthValues[strengthIndex],
+        },
       });
       if (error) throw error;
 
@@ -153,28 +179,14 @@ const GeneratePage = () => {
           const imageUrl = img.url || img.image_url?.url;
           if (!imageUrl) continue;
           if (projectId) {
-            const saved = await projectsApi.saveDesign(projectId, {
-              prompt: prompt.trim(),
-              imageUrl,
-              stage,
-            });
+            const saved = await projectsApi.saveDesign(projectId, { prompt: prompt.trim(), imageUrl, stage });
             newDesigns.push(saved);
           } else {
-            newDesigns.push({
-              id: crypto.randomUUID(),
-              url: imageUrl,
-              prompt: prompt.trim(),
-              stage,
-              selected: false,
-            });
+            newDesigns.push({ id: crypto.randomUUID(), url: imageUrl, prompt: prompt.trim(), stage, selected: false });
           }
         }
         setDesigns((prev) => [...newDesigns, ...prev]);
-
-        if (projectId) {
-          await projectsApi.updateStatus(projectId, stage);
-        }
-
+        if (projectId) await projectsApi.updateStatus(projectId, stage);
         toast.success(
           stage === "concept" ? "Concepts generated! Select favorites to refine."
             : stage === "design" ? "Designs refined! Select the best for renders."
@@ -210,31 +222,23 @@ const GeneratePage = () => {
   return (
     <Layout>
       <div className="container py-8">
-        {/* Project header */}
         {project && (
           <div className="flex items-center gap-3 mb-4">
-            <button
-              onClick={() => navigate("/projects")}
-              className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-            >
+            <button onClick={() => navigate("/projects")} className="p-2 rounded-lg border border-border text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors">
               <ChevronLeft className="w-4 h-4" />
             </button>
             <div>
               <h2 className="text-lg font-display font-bold text-foreground">{project.name}</h2>
-              {project.description && (
-                <p className="text-xs text-muted-foreground font-body">{project.description}</p>
-              )}
+              {project.description && <p className="text-xs text-muted-foreground font-body">{project.description}</p>}
             </div>
           </div>
         )}
 
-        {/* Stage indicator */}
         <div className="mb-6">
           <StageIndicator current={stage} onChange={setStage} />
         </div>
 
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8">
-          {/* Left: Controls */}
           <div className="space-y-5">
             <div>
               <h1 className="text-2xl font-display font-bold text-foreground">
@@ -264,6 +268,53 @@ const GeneratePage = () => {
                 placeholder={stagePromptHints[stage]}
                 className="w-full h-28 bg-card border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
               />
+            </div>
+
+            {/* Style Tags */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground font-body">
+                Style Tags
+                {selectedTags.length > 0 && <span className="text-primary ml-1">({selectedTags.length})</span>}
+              </label>
+              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                {STYLE_TAGS.map((tag) => {
+                  const active = selectedTags.includes(tag);
+                  return (
+                    <button
+                      key={tag}
+                      onClick={() => toggleTag(tag)}
+                      className={`px-2.5 py-1 rounded-full text-[11px] font-body transition-all ${
+                        active
+                          ? "bg-primary/15 border border-primary text-primary"
+                          : "border border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Reference Strength */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-medium text-foreground font-body">Reference Strength</label>
+                <span className="text-xs text-primary font-body font-medium">{strengthLabels[strengthIndex]}</span>
+              </div>
+              <Slider
+                value={[strengthIndex]}
+                onValueChange={([v]) => setStrengthIndex(v)}
+                max={2}
+                min={0}
+                step={1}
+                className="w-full"
+              />
+              <div className="flex justify-between text-[10px] text-muted-foreground font-body">
+                <span>Creative</span>
+                <span>Balanced</span>
+                <span>Faithful</span>
+              </div>
             </div>
 
             {/* Collections */}
@@ -338,7 +389,6 @@ const GeneratePage = () => {
             </button>
           </div>
 
-          {/* Right: Results */}
           <div>
             <DesignResults
               designs={designs}
