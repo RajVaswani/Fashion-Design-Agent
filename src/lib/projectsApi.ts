@@ -168,7 +168,6 @@ export const projectsApi = {
       selected: data.selected,
       citation: (data as any).citation || "",
     };
-    };
   },
 
   async toggleDesignSelected(designId: string, selected: boolean): Promise<void> {
