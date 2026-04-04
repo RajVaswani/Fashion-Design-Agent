@@ -1,10 +1,11 @@
 import type { DesignStage } from "@/types/gallery";
-import { Lightbulb, Paintbrush, Camera } from "lucide-react";
+import { Lightbulb, Paintbrush, Camera, FileImage } from "lucide-react";
 
 const stages: { key: DesignStage; label: string; icon: React.ElementType; desc: string }[] = [
   { key: "concept", label: "Concept", icon: Lightbulb, desc: "Explore ideas" },
   { key: "design", label: "Design", icon: Paintbrush, desc: "Refine details" },
   { key: "realistic", label: "Realistic", icon: Camera, desc: "Final renders" },
+  { key: "moodboard", label: "Mood Board", icon: FileImage, desc: "Export PDF" },
 ];
 
 interface StageIndicatorProps {

@@ -8,6 +8,7 @@ import StageIndicator from "@/components/generate/StageIndicator";
 import CollectionSelector from "@/components/generate/CollectionSelector";
 import MoodBoardUploader from "@/components/generate/MoodBoardUploader";
 import DesignResults from "@/components/generate/DesignResults";
+import MoodBoardExport from "@/components/generate/MoodBoardExport";
 import ImageCard from "@/components/ImageCard";
 import { collectionsApi } from "@/lib/collectionsApi";
 import { projectsApi, type Project } from "@/lib/projectsApi";
@@ -54,6 +55,7 @@ const stagePromptHints: Record<DesignStage, string> = {
   concept: "Describe the clothing design concept… e.g. 'A flowing silk evening gown with geometric Art Deco patterns in emerald green'",
   design: "Refine the selected concepts… e.g. 'Add intricate beading along the neckline, make the silhouette more fitted'",
   realistic: "Describe the final look… e.g. 'Show on a model, studio lighting, white background, e-commerce product photo'",
+  moodboard: "",
 };
 
 const GeneratePage = () => {
@@ -215,14 +217,18 @@ const GeneratePage = () => {
   };
 
   const handlePromoteSelected = async () => {
-    const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
+    const nextStage: DesignStage = stage === "concept" ? "design" : stage === "design" ? "realistic" : "moodboard";
     setStage(nextStage);
-    setSelectedTags([]); // Clear tags for new stage
+    setSelectedTags([]);
     if (nextStage === "realistic") setOutputStyle("realistic");
     if (projectId) {
       try { await projectsApi.updateStatus(projectId, nextStage); } catch (err) { console.error(err); }
     }
-    toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
+    if (nextStage === "moodboard") {
+      toast.success("Ready to generate your mood board PDF!");
+    } else {
+      toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
+    }
   };
 
   const handleGenerate = async () => {
@@ -327,6 +333,7 @@ const GeneratePage = () => {
     concept: "Generate Concepts",
     design: "Refine Designs",
     realistic: "Render Realistic",
+    moodboard: "Generate Mood Board",
   };
 
   if (loadingProject) {
@@ -375,6 +382,14 @@ const GeneratePage = () => {
           <StageIndicator current={stage} onChange={setStage} />
         </div>
 
+        {stage === "moodboard" ? (
+          <MoodBoardExport
+            designs={designs}
+            projectName={project?.name || "Untitled"}
+            masterPrompt={masterPrompt}
+            onClose={() => setStage("realistic")}
+          />
+        ) : (
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8">
           <div className="space-y-5">
             <div>
@@ -634,7 +649,7 @@ const GeneratePage = () => {
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
               const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
-              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
+              const _focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
               return (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-foreground font-body">
@@ -722,7 +737,7 @@ const GeneratePage = () => {
             <DesignResults
               designs={designs}
               stage={stage}
-              selectable={stage !== "realistic"}
+              selectable
               onToggleSelect={toggleDesignSelect}
               onPromoteSelected={handlePromoteSelected}
               onUpdateNotes={handleUpdateNotes}
@@ -734,6 +749,7 @@ const GeneratePage = () => {
             />
           </div>
         </div>
+        )}
       </div>
     </Layout>
   );
