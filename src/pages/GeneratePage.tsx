@@ -195,6 +195,7 @@ const GeneratePage = () => {
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
           outputStyle,
+          masterPrompt: masterPrompt.trim() || undefined,
         },
       });
       if (error) throw error;
