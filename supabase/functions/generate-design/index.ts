@@ -101,6 +101,9 @@ serve(async (req) => {
     };
 
     let userText = `## Output Style\n${outputStyleDescriptions[outputStyle] || outputStyleDescriptions.sketch}\n\n`;
+    if (masterPrompt) {
+      userText += `## Project Theme (MUST inform all design decisions)\n${masterPrompt}\n\n`;
+    }
     userText += `## Reference Strength\n${strengthInstruction}\n\n`;
     userText += `## Design Prompt\n${prompt}\n`;
 
