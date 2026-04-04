@@ -5,6 +5,7 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
+  masterPrompt?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
