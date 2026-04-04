@@ -160,6 +160,15 @@ const ImageCard = ({
               <Plus className="w-3.5 h-3.5" />
             </button>
           )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(image.id)}
+              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
     </div>
