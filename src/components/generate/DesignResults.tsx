@@ -105,6 +105,7 @@ const DesignResults = ({
         )}
 
         <div className="grid grid-cols-2 gap-3">
+          {isGenerating && <LoadingCards />}
           {stageDesigns.map((item) => (
             <div
               key={item.id}
