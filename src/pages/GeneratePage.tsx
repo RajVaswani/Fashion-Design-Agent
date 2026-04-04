@@ -261,6 +261,23 @@ const GeneratePage = () => {
           </div>
         )}
 
+        {/* Master Prompt */}
+        {project && (
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-foreground font-body">Project Theme / Master Prompt</label>
+              <AiImproveButton text={masterPrompt} context="design-prompt" onImproved={(t) => { setMasterPrompt(t); if (projectId) projectsApi.updateMasterPrompt(projectId, t); }} />
+            </div>
+            <textarea
+              value={masterPrompt}
+              onChange={(e) => setMasterPrompt(e.target.value)}
+              onBlur={() => { if (projectId) projectsApi.updateMasterPrompt(projectId, masterPrompt); }}
+              placeholder="e.g. 'A luxury resort-wear collection inspired by Mediterranean architecture — earthy tones, flowing fabrics, relaxed elegance'"
+              className="w-full h-16 bg-card border border-border rounded-lg p-3 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
+            />
+          </div>
+        )}
+
         <div className="mb-6">
           <StageIndicator current={stage} onChange={setStage} />
         </div>
