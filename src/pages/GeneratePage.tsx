@@ -574,6 +574,7 @@ const GeneratePage = () => {
               onToggleSelect={toggleDesignSelect}
               onPromoteSelected={handlePromoteSelected}
               onUpdateNotes={handleUpdateNotes}
+              isGenerating={isGenerating}
             />
           </div>
         </div>

@@ -164,7 +164,7 @@ serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-pro-image-preview",
+        model: "google/gemini-3.1-flash-image-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content },
@@ -201,40 +201,41 @@ serve(async (req) => {
     const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
     const uploadedImages: { url: string }[] = [];
 
+    const uploadBase64 = async (base64: string, mimeType = "image/png") => {
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      const ext = mimeType.split("/")[1] || "png";
+      const folder = userId || "anonymous";
+      const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
+      const { error: uploadError } = await serviceClient.storage
+        .from("design-outputs")
+        .upload(fileName, bytes, { contentType: mimeType });
+      if (uploadError) { console.error("Upload error:", uploadError); return null; }
+      const { data: urlData } = serviceClient.storage.from("design-outputs").getPublicUrl(fileName);
+      return urlData.publicUrl;
+    };
+
     for (const img of rawImages) {
-      let publicUrl: string;
+      let publicUrl: string | null = null;
 
-      if (img.data) {
-        const bytes = Uint8Array.from(atob(img.data), (c) => c.charCodeAt(0));
-        const ext = (img.mime_type || "image/png").split("/")[1] || "png";
-        const folder = userId || "anonymous";
-        const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
-
-        const { error: uploadError } = await serviceClient.storage
-          .from("design-outputs")
-          .upload(fileName, bytes, { contentType: img.mime_type || "image/png" });
-
-        if (uploadError) { console.error("Upload error:", uploadError); continue; }
-
-        const { data: urlData } = serviceClient.storage.from("design-outputs").getPublicUrl(fileName);
-        publicUrl = urlData.publicUrl;
-      } else if (img.image_url?.url) {
-        publicUrl = img.image_url.url;
+      if (img.image_url?.url) {
+        const dataUrlMatch = img.image_url.url.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (dataUrlMatch) {
+          publicUrl = await uploadBase64(dataUrlMatch[2], dataUrlMatch[1]);
+        } else {
+          publicUrl = img.image_url.url;
+        }
+      } else if (img.data) {
+        publicUrl = await uploadBase64(img.data, img.mime_type || "image/png");
       } else if (typeof img === "string") {
-        const bytes = Uint8Array.from(atob(img), (c) => c.charCodeAt(0));
-        const folder = userId || "anonymous";
-        const fileName = `${folder}/${crypto.randomUUID()}.png`;
-        const { error: uploadError } = await serviceClient.storage
-          .from("design-outputs")
-          .upload(fileName, bytes, { contentType: "image/png" });
-        if (uploadError) { console.error("Upload error:", uploadError); continue; }
-        const { data: urlData } = serviceClient.storage.from("design-outputs").getPublicUrl(fileName);
-        publicUrl = urlData.publicUrl;
-      } else {
-        continue;
+        const dataUrlMatch = img.match(/^data:(image\/\w+);base64,(.+)$/);
+        if (dataUrlMatch) {
+          publicUrl = await uploadBase64(dataUrlMatch[2], dataUrlMatch[1]);
+        } else {
+          publicUrl = await uploadBase64(img);
+        }
       }
 
-      uploadedImages.push({ url: publicUrl });
+      if (publicUrl) uploadedImages.push({ url: publicUrl });
     }
 
     return new Response(

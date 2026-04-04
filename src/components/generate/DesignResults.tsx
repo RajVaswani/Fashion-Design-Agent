@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2 } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DesignResultsProps {
   designs: GeneratedDesign[];
@@ -10,6 +11,7 @@ interface DesignResultsProps {
   onToggleSelect: (id: string) => void;
   onPromoteSelected: () => void;
   onUpdateNotes?: (id: string, notes: string) => void;
+  isGenerating?: boolean;
 }
 
 const stageLabels: Record<DesignStage, string> = {
@@ -25,6 +27,7 @@ const DesignResults = ({
   onToggleSelect,
   onPromoteSelected,
   onUpdateNotes,
+  isGenerating = false,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
@@ -50,7 +53,7 @@ const DesignResults = ({
     setEditingNoteId(null);
   }, [editingNoteId, noteText, onUpdateNotes]);
 
-  if (stageDesigns.length === 0) {
+  if (stageDesigns.length === 0 && !isGenerating) {
     return (
       <div className="border border-border rounded-xl flex flex-col items-center justify-center py-20 bg-card/50">
         <Sparkles className="w-10 h-10 text-muted-foreground mb-3" />
@@ -64,6 +67,23 @@ const DesignResults = ({
       </div>
     );
   }
+
+  const LoadingCards = () => (
+    <>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="rounded-lg overflow-hidden border border-border bg-card animate-pulse">
+          <div className="aspect-[3/4] relative bg-secondary flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-primary/40 animate-spin" />
+            <p className="text-xs text-muted-foreground font-body">Generating…</p>
+          </div>
+          <div className="p-2 space-y-1.5">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
 
   return (
     <>
@@ -85,6 +105,7 @@ const DesignResults = ({
         )}
 
         <div className="grid grid-cols-2 gap-3">
+          {isGenerating && <LoadingCards />}
           {stageDesigns.map((item) => (
             <div
               key={item.id}
