@@ -30,4 +30,5 @@ export interface GeneratedDesign {
   stage: DesignStage;
   selected?: boolean;
   notes?: string;
+  citation?: string;
 }
