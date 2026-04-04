@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
 
