@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, MessageCircle, X, Plus } from "lucide-react";
+import { Check, MessageCircle, X, Plus, Trash2 } from "lucide-react";
 import type { GalleryImage, Annotation } from "@/types/gallery";
 
 interface ImageCardProps {
