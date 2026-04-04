@@ -82,6 +82,7 @@ export const projectsApi = {
         stage: d.stage as DesignStage,
         selected: d.selected,
         notes: (d as any).notes || "",
+        citation: (d as any).citation || "",
       })),
     };
   },
