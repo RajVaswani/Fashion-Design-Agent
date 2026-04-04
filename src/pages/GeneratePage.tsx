@@ -15,7 +15,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 
-const STYLE_TAGS = [
+const OUTPUT_STYLES = [
+  { value: "sketch", label: "Sketch", desc: "Hand-drawn fashion illustration" },
+  { value: "flat-2d", label: "2D Flat", desc: "Technical flat / spec drawing" },
+  { value: "3d-model", label: "3D Model", desc: "3D rendered garment on mannequin" },
+  { value: "realistic", label: "Realistic", desc: "Photorealistic on a model" },
+] as const;
+type OutputStyle = typeof OUTPUT_STYLES[number]["value"];
+
   "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
   "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
   "Silk", "Denim", "Wool", "Leather", "Cotton", "Linen",
