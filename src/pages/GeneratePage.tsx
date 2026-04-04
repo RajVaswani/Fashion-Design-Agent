@@ -23,6 +23,7 @@ const OUTPUT_STYLES = [
 ] as const;
 type OutputStyle = typeof OUTPUT_STYLES[number]["value"];
 
+const STYLE_TAGS = [
   "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
   "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
   "Silk", "Denim", "Wool", "Leather", "Cotton", "Linen",
