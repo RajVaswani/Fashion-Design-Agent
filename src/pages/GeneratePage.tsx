@@ -59,6 +59,7 @@ const GeneratePage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [strengthIndex, setStrengthIndex] = useState(2);
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
+  const [masterPrompt, setMasterPrompt] = useState("");
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
