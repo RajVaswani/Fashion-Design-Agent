@@ -69,6 +69,7 @@ export const projectsApi = {
       id: p.id,
       name: p.name,
       description: p.description || undefined,
+      masterPrompt: (p as any).master_prompt || undefined,
       status: p.status,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
