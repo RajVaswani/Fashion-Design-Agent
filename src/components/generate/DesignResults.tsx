@@ -33,6 +33,8 @@ const DesignResults = ({
   onUpdateNotes,
   onDeleteDesign,
   onEnhanceDesign,
+  onFocusDesign,
+  focusedDesignId,
   isGenerating = false,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
