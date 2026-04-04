@@ -32,6 +32,7 @@ const DesignResults = ({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
+  const [viewingCitationId, setViewingCitationId] = useState<string | null>(null);
 
   const stageDesigns = designs.filter((d) => d.stage === stage);
   const selectedCount = stageDesigns.filter((d) => d.selected).length;
