@@ -263,16 +263,16 @@ const GeneratePage = () => {
       const annotationContext = annotationParts.join("\n");
 
       // Build design notes from selected previous-stage designs
-      const designNotes = selectedPrevDesigns
+      const designNotes = effectivePrevDesigns
         .filter((d) => d.notes && d.notes.trim().length > 0)
         .map((d) => `Design note: ${d.notes}`)
         .join("\n");
 
       const fullAnnotationContext = [annotationContext, designNotes].filter(Boolean).join("\n\n");
 
-      // Prioritize: previous stage designs first, then mood board refs, then collection refs
+      // Prioritize: focused/selected previous stage designs first, then mood board refs, then collection refs
       const imageUrls = [
-        ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+        ...effectivePrevDesigns.slice(0, 4).map((d) => d.url),
         ...moodBoardRefs.slice(0, 4).map((mb) => mb.src),
         ...selectedRefs.slice(0, 4).map((img) => img.src),
       ].slice(0, 8);
