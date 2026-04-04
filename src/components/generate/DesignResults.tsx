@@ -168,6 +168,16 @@ const DesignResults = ({
                     {item.prompt}
                   </span>
                   <div className="flex items-center gap-1">
+                    {/* Focus button — design & realistic stages */}
+                    {(stage === "design" || stage === "realistic") && onFocusDesign && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onFocusDesign(item.id); }}
+                        className={`p-1 transition-colors ${focusedDesignId === item.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                        title="Focus on this design to improve it"
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {/* Enhance button — design & realistic stages */}
                     {(stage === "design" || stage === "realistic") && onEnhanceDesign && (
                       <button
