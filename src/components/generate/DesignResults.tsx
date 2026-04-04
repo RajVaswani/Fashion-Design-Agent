@@ -334,6 +334,67 @@ const DesignResults = ({
           </div>
         </div>
       )}
+
+      {/* Enhance prompt modal */}
+      {enhancingId && (() => {
+        const enhanceDesign = designs.find(d => d.id === enhancingId);
+        return (
+          <div
+            className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4"
+            onClick={() => setEnhancingId(null)}
+          >
+            <div
+              className="bg-card border border-border rounded-xl p-4 w-full max-w-md space-y-3 animate-fade-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-display font-bold text-foreground flex items-center gap-1.5">
+                  <Wand2 className="w-4 h-4 text-primary" />
+                  Enhance Design
+                </h3>
+                <button onClick={() => setEnhancingId(null)} className="p-1 text-muted-foreground hover:text-foreground">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              {enhanceDesign && (
+                <div className="rounded-lg overflow-hidden border border-border max-h-40">
+                  <img src={enhanceDesign.url} alt="" className="w-full h-full object-cover" />
+                </div>
+              )}
+              <p className="text-[11px] text-muted-foreground font-body">
+                Describe what to change or enhance on this specific design. The AI will use this as focused instructions.
+              </p>
+              <textarea
+                autoFocus
+                value={enhancePrompt}
+                onChange={(e) => setEnhancePrompt(e.target.value)}
+                placeholder="e.g. Make the collar wider, add gold buttons, change to a deeper blue..."
+                className="w-full h-24 bg-secondary border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
+              />
+              <div className="flex justify-end gap-2">
+                <button
+                  onClick={() => setEnhancingId(null)}
+                  className="px-3 py-1.5 rounded-md border border-border text-xs font-body text-muted-foreground hover:text-foreground"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => {
+                    if (enhancePrompt.trim() && onEnhanceDesign) {
+                      onEnhanceDesign(enhancingId, enhancePrompt.trim());
+                      setEnhancingId(null);
+                    }
+                  }}
+                  disabled={!enhancePrompt.trim()}
+                  className="px-3 py-1.5 rounded-md bg-primary text-primary-foreground text-xs font-body font-medium hover:bg-primary/90 disabled:opacity-50"
+                >
+                  <Wand2 className="w-3 h-3 inline mr-1" /> Enhance
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </>
   );
 };
