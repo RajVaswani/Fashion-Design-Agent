@@ -756,9 +756,5 @@ const GeneratePage = () => {
     </Layout>
   );
 };
-      </div>
-    </Layout>
-  );
-};
 
 export default GeneratePage;
