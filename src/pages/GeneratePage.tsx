@@ -1,17 +1,19 @@
 import { useState } from "react";
-import { Sparkles, Loader2, ImageIcon } from "lucide-react";
+import { Sparkles, Loader2, ImageIcon, Download } from "lucide-react";
 import Layout from "@/components/Layout";
 import ImageCard from "@/components/ImageCard";
 import type { GalleryImage } from "@/types/gallery";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const GeneratePage = () => {
   const [prompt, setPrompt] = useState("");
   const [referenceImages, setReferenceImages] = useState<GalleryImage[]>([]);
-  const [generatedImages, setGeneratedImages] = useState<string[]>([]);
+  const [generatedImages, setGeneratedImages] = useState<
+    { url: string; prompt: string }[]
+  >([]);
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // For demo, allow uploading reference images here too
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
@@ -34,7 +36,9 @@ const GeneratePage = () => {
 
   const toggleSelect = (id: string) => {
     setReferenceImages((prev) =>
-      prev.map((img) => (img.id === id ? { ...img, selected: !img.selected } : img))
+      prev.map((img) =>
+        img.id === id ? { ...img, selected: !img.selected } : img
+      )
     );
   };
 
@@ -51,19 +55,37 @@ const GeneratePage = () => {
     }
 
     setIsGenerating(true);
-    
-    // Placeholder: In production this calls the AI edge function
-    // For now, simulate generation
+
     try {
-      await new Promise((r) => setTimeout(r, 2500));
-      // Use reference images as placeholder results for demo
-      setGeneratedImages((prev) => [
-        ...selectedRefs.map((img) => img.src),
-        ...prev,
-      ]);
-      toast.success("Designs generated successfully!");
-    } catch {
-      toast.error("Generation failed. Please try again.");
+      const { data, error } = await supabase.functions.invoke(
+        "generate-design",
+        {
+          body: {
+            prompt: prompt.trim(),
+            referenceImages: selectedRefs.map((img) => img.src),
+          },
+        }
+      );
+
+      if (error) throw error;
+
+      if (data?.images && data.images.length > 0) {
+        const newImages = data.images.map(
+          (img: { image_url: { url: string } }) => ({
+            url: img.image_url.url,
+            prompt: prompt.trim(),
+          })
+        );
+        setGeneratedImages((prev) => [...newImages, ...prev]);
+        toast.success("Design generated!");
+      } else {
+        toast.error("No image was generated. Try a different prompt.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      const msg =
+        err?.message || err?.error || "Generation failed. Please try again.";
+      toast.error(msg);
     } finally {
       setIsGenerating(false);
     }
@@ -152,7 +174,7 @@ const GeneratePage = () => {
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating...
+                  Generating with Gemini Pro 3...
                 </>
               ) : (
                 <>
@@ -177,16 +199,30 @@ const GeneratePage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {generatedImages.map((src, i) => (
+                {generatedImages.map((item, i) => (
                   <div
                     key={i}
-                    className="aspect-[3/4] rounded-lg overflow-hidden border border-border bg-card animate-fade-in"
+                    className="group relative rounded-lg overflow-hidden border border-border bg-card animate-fade-in"
                   >
-                    <img
-                      src={src}
-                      alt={`Generated design ${i + 1}`}
-                      className="w-full h-full object-cover"
-                    />
+                    <div className="aspect-[3/4]">
+                      <img
+                        src={item.url}
+                        alt={item.prompt}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-2 flex items-center justify-between">
+                      <span className="text-xs text-muted-foreground truncate font-body max-w-[80%]">
+                        {item.prompt}
+                      </span>
+                      <a
+                        href={item.url}
+                        download={`design-${i}.png`}
+                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
                   </div>
                 ))}
               </div>
