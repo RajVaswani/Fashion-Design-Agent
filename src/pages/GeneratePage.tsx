@@ -23,12 +23,27 @@ const OUTPUT_STYLES = [
 ] as const;
 type OutputStyle = typeof OUTPUT_STYLES[number]["value"];
 
-const STYLE_TAGS = [
+const CONCEPT_STYLE_TAGS = [
   "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
   "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
   "Silk", "Denim", "Wool", "Leather", "Cotton", "Linen",
   "Neutral tones", "Bold colors", "Monochrome", "Pastel", "Earth tones",
   "Embroidered", "Pleated", "Ruffled", "Cut-out", "Asymmetric",
+];
+
+const DESIGN_EDIT_TAGS = [
+  "Add stitching detail", "Refine neckline", "Adjust sleeve length", "Tighten fit",
+  "Loosen fit", "Add embellishments", "Change closure type", "Add pockets",
+  "Modify hem", "Add lining", "Change collar", "Add darts",
+  "Surface texture", "Pattern placement", "Topstitching", "Seam lines",
+];
+
+const REALISTIC_TAGS = [
+  "Front view", "Back view", "Side view", "3/4 angle", "Close-up detail",
+  "Studio lighting", "Natural light", "Dramatic lighting", "Soft lighting",
+  "White background", "Urban setting", "Nature setting", "Runway",
+  "Standing pose", "Walking pose", "Seated pose", "Dynamic pose",
+  "E-commerce style", "Editorial style", "Lookbook style", "Campaign style",
 ];
 
 const strengthLabels = ["Low", "Medium", "High"];
@@ -142,6 +157,8 @@ const GeneratePage = () => {
   const handlePromoteSelected = async () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
+    setSelectedTags([]); // Clear tags for new stage
+    if (nextStage === "realistic") setOutputStyle("realistic");
     if (projectId) {
       try { await projectsApi.updateStatus(projectId, nextStage); } catch (err) { console.error(err); }
     }
@@ -315,107 +332,201 @@ const GeneratePage = () => {
               />
             </div>
 
-            {/* Output Style */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground font-body">Output Style</label>
-              <div className="grid grid-cols-4 gap-1.5">
-                {OUTPUT_STYLES.map((s) => (
-                  <button
-                    key={s.value}
-                    onClick={() => setOutputStyle(s.value)}
-                    className={`px-2 py-2 rounded-lg text-center text-[11px] font-body transition-all ${
-                      outputStyle === s.value
-                        ? "bg-primary/15 border border-primary text-primary"
-                        : "border border-border text-muted-foreground hover:border-primary/40"
-                    }`}
-                  >
-                    <div className="font-medium">{s.label}</div>
-                    <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Style Tags */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground font-body">
-                Style Tags
-                {selectedTags.length > 0 && <span className="text-primary ml-1">({selectedTags.length})</span>}
-              </label>
-              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                {STYLE_TAGS.map((tag) => {
-                  const active = selectedTags.includes(tag);
-                  return (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-2.5 py-1 rounded-full text-[11px] font-body transition-all ${
-                        active
-                          ? "bg-primary/15 border border-primary text-primary"
-                          : "border border-border text-muted-foreground hover:border-primary/40"
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Reference Strength */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-foreground font-body">Reference Strength</label>
-                <span className="text-xs text-primary font-body font-medium">{strengthLabels[strengthIndex]}</span>
-              </div>
-              <Slider
-                value={[strengthIndex]}
-                onValueChange={([v]) => setStrengthIndex(v)}
-                max={2}
-                min={0}
-                step={1}
-                className="w-full"
-              />
-              <div className="flex justify-between text-[10px] text-muted-foreground font-body">
-                <span>Creative</span>
-                <span>Balanced</span>
-                <span>Faithful</span>
-              </div>
-            </div>
-
-            {/* Collections */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium text-foreground font-body">
-                Reference Collections
-                {selectedCollectionIds.length > 0 && <span className="text-primary ml-1">({selectedCollectionIds.length})</span>}
-              </label>
-              <CollectionSelector
-                collections={collections}
-                selectedIds={selectedCollectionIds}
-                onToggle={toggleCollection}
-                loading={loadingCollections}
-                onCollectionCreated={(col) => {
-                  setCollections((prev) => [col, ...prev]);
-                  toggleCollection(col.id);
-                }}
-              />
-            </div>
-
-            {/* Reference images */}
-            {referenceImages.length > 0 && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-medium text-foreground font-body">
-                  Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
-                </label>
-                <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
-                  {referenceImages.map((img) => (
-                    <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
-                  ))}
+            {/* === CONCEPT STAGE CONTROLS === */}
+            {stage === "concept" && (
+              <>
+                {/* Output Style */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">Output Style</label>
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {OUTPUT_STYLES.map((s) => (
+                      <button
+                        key={s.value}
+                        onClick={() => setOutputStyle(s.value)}
+                        className={`px-2 py-2 rounded-lg text-center text-[11px] font-body transition-all ${
+                          outputStyle === s.value
+                            ? "bg-primary/15 border border-primary text-primary"
+                            : "border border-border text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">{s.label}</div>
+                        <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+
+                {/* Style Tags */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">
+                    Style Tags
+                    {selectedTags.length > 0 && <span className="text-primary ml-1">({selectedTags.length})</span>}
+                  </label>
+                  <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                    {CONCEPT_STYLE_TAGS.map((tag) => {
+                      const active = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-body transition-all ${
+                            active
+                              ? "bg-primary/15 border border-primary text-primary"
+                              : "border border-border text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Reference Strength */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-medium text-foreground font-body">Reference Strength</label>
+                    <span className="text-xs text-primary font-body font-medium">{strengthLabels[strengthIndex]}</span>
+                  </div>
+                  <Slider
+                    value={[strengthIndex]}
+                    onValueChange={([v]) => setStrengthIndex(v)}
+                    max={2}
+                    min={0}
+                    step={1}
+                    className="w-full"
+                  />
+                  <div className="flex justify-between text-[10px] text-muted-foreground font-body">
+                    <span>Creative</span>
+                    <span>Balanced</span>
+                    <span>Faithful</span>
+                  </div>
+                </div>
+
+                {/* Collections */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">
+                    Reference Collections
+                    {selectedCollectionIds.length > 0 && <span className="text-primary ml-1">({selectedCollectionIds.length})</span>}
+                  </label>
+                  <CollectionSelector
+                    collections={collections}
+                    selectedIds={selectedCollectionIds}
+                    onToggle={toggleCollection}
+                    loading={loadingCollections}
+                    onCollectionCreated={(col) => {
+                      setCollections((prev) => [col, ...prev]);
+                      toggleCollection(col.id);
+                    }}
+                  />
+                </div>
+
+                {/* Reference images */}
+                {referenceImages.length > 0 && (
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-foreground font-body">
+                      Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
+                    </label>
+                    <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
+                      {referenceImages.map((img) => (
+                        <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
-            {/* Previous stage selections */}
+            {/* === DESIGN STAGE CONTROLS === */}
+            {stage === "design" && (
+              <>
+                {/* Edit Focus Tags */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">
+                    Edit Focus
+                    {selectedTags.length > 0 && <span className="text-primary ml-1">({selectedTags.length})</span>}
+                  </label>
+                  <p className="text-[10px] text-muted-foreground font-body">Select what to refine on the selected concepts</p>
+                  <div className="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto">
+                    {DESIGN_EDIT_TAGS.map((tag) => {
+                      const active = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-body transition-all ${
+                            active
+                              ? "bg-primary/15 border border-primary text-primary"
+                              : "border border-border text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Output format for design stage */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">Detail Level</label>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {([
+                      { value: "flat-2d", label: "Tech Flat", desc: "Construction details" },
+                      { value: "sketch", label: "Detailed Sketch", desc: "Refined illustration" },
+                      { value: "3d-model", label: "3D Drape", desc: "Fabric on form" },
+                    ] as const).map((s) => (
+                      <button
+                        key={s.value}
+                        onClick={() => setOutputStyle(s.value)}
+                        className={`px-2 py-2 rounded-lg text-center text-[11px] font-body transition-all ${
+                          outputStyle === s.value
+                            ? "bg-primary/15 border border-primary text-primary"
+                            : "border border-border text-muted-foreground hover:border-primary/40"
+                        }`}
+                      >
+                        <div className="font-medium">{s.label}</div>
+                        <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* === REALISTIC STAGE CONTROLS === */}
+            {stage === "realistic" && (
+              <>
+                {/* Photoshoot Settings */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-foreground font-body">
+                    Photoshoot Settings
+                    {selectedTags.length > 0 && <span className="text-primary ml-1">({selectedTags.length})</span>}
+                  </label>
+                  <p className="text-[10px] text-muted-foreground font-body">Choose angles, lighting, and photography style</p>
+                  <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                    {REALISTIC_TAGS.map((tag) => {
+                      const active = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          onClick={() => toggleTag(tag)}
+                          className={`px-2.5 py-1 rounded-full text-[11px] font-body transition-all ${
+                            active
+                              ? "bg-primary/15 border border-primary text-primary"
+                              : "border border-border text-muted-foreground hover:border-primary/40"
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {/* Previous stage selections — shown for design & realistic */}
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
               const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
