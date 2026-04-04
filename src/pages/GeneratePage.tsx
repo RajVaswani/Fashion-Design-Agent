@@ -54,6 +54,7 @@ const stagePromptHints: Record<DesignStage, string> = {
   concept: "Describe the clothing design concept… e.g. 'A flowing silk evening gown with geometric Art Deco patterns in emerald green'",
   design: "Refine the selected concepts… e.g. 'Add intricate beading along the neckline, make the silhouette more fitted'",
   realistic: "Describe the final look… e.g. 'Show on a model, studio lighting, white background, e-commerce product photo'",
+  moodboard: "",
 };
 
 const GeneratePage = () => {
