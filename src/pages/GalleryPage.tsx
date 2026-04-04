@@ -136,15 +136,38 @@ const GalleryPage = () => {
 
           const fileName =
             img.src.split("/").pop()?.split("?")[0] || "image";
-          const annotation: Annotation | null = img.description
-            ? { id: crypto.randomUUID(), text: img.description, x: 50, y: 90 }
-            : null;
+
+          // Split description into multiple annotations spread across the image
+          const annotations: Annotation[] = [];
+          if (img.description) {
+            const parts = img.description
+              .split(/\s*[—|]\s*/)
+              .map((s: string) => s.trim())
+              .filter((s: string) => s.length > 2);
+
+            const positions = [
+              { x: 50, y: 15 },
+              { x: 50, y: 40 },
+              { x: 50, y: 65 },
+              { x: 50, y: 85 },
+              { x: 25, y: 50 },
+            ];
+
+            parts.slice(0, 5).forEach((text: string, i: number) => {
+              annotations.push({
+                id: crypto.randomUUID(),
+                text,
+                x: positions[i].x,
+                y: positions[i].y,
+              });
+            });
+          }
 
           newImages.push({
             id: crypto.randomUUID(),
             src: img.src,
             name: fileName,
-            annotations: annotation ? [annotation] : [],
+            annotations,
           });
           addedCount++;
         }
