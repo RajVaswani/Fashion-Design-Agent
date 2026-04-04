@@ -76,6 +76,8 @@ const GeneratePage = () => {
   const [strengthIndex, setStrengthIndex] = useState(2);
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
   const [masterPrompt, setMasterPrompt] = useState("");
+  const [conceptRefTab, setConceptRefTab] = useState<"collections" | "moodboard">("collections");
+  const [moodBoardRefs, setMoodBoardRefs] = useState<{ src: string; annotations: { id: string; text: string; x: number; y: number }[] }[]>([]);
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
