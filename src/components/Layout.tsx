@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Upload, Sparkles, LogOut } from "lucide-react";
+import { Upload, FolderKanban, LogOut } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -7,15 +7,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const { signOut } = useAuth();
 
   const navItems = [
-    { to: "/", label: "Gallery", icon: Upload },
-    { to: "/generate", label: "Generate", icon: Sparkles },
+    { to: "/projects", label: "Projects", icon: FolderKanban },
+    { to: "/gallery", label: "Gallery", icon: Upload },
   ];
 
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b border-border bg-surface/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/projects" className="flex items-center gap-2">
             <span className="text-gradient-gold font-display text-xl font-bold tracking-tight">
               Atelier
             </span>
@@ -26,7 +26,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center gap-1">
             <nav className="flex items-center gap-1">
               {navItems.map(({ to, label, icon: Icon }) => {
-                const active = location.pathname === to;
+                const active = location.pathname === to || location.pathname.startsWith(to + "/");
                 return (
                   <Link
                     key={to}
