@@ -149,6 +149,7 @@ export type Database = {
       }
       project_designs: {
         Row: {
+          citation: string | null
           created_at: string
           id: string
           image_url: string
@@ -160,6 +161,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          citation?: string | null
           created_at?: string
           id?: string
           image_url: string
@@ -171,6 +173,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          citation?: string | null
           created_at?: string
           id?: string
           image_url?: string
