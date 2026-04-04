@@ -78,6 +78,7 @@ const GeneratePage = () => {
   const [masterPrompt, setMasterPrompt] = useState("");
   const [conceptRefTab, setConceptRefTab] = useState<"collections" | "moodboard">("collections");
   const [moodBoardRefs, setMoodBoardRefs] = useState<{ src: string; annotations: { id: string; text: string; x: number; y: number }[] }[]>([]);
+  const [focusedDesignId, setFocusedDesignId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
@@ -231,8 +232,12 @@ const GeneratePage = () => {
     const previousStage: DesignStage | null = stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
     const selectedPrevDesigns = previousStage ? designs.filter((d) => d.stage === previousStage && d.selected) : [];
 
+    // If a specific design is focused, use only that one
+    const focusedDesign = focusedDesignId ? selectedPrevDesigns.find((d) => d.id === focusedDesignId) : null;
+    const effectivePrevDesigns = focusedDesign ? [focusedDesign] : selectedPrevDesigns;
+
     if (stage === "concept" && selectedRefs.length === 0 && moodBoardRefs.length === 0) { toast.error("Select at least one reference (collection or mood board)"); return; }
-    if (stage !== "concept" && selectedPrevDesigns.length === 0 && selectedRefs.length === 0) { toast.error("Select designs from the previous stage"); return; }
+    if (stage !== "concept" && effectivePrevDesigns.length === 0 && selectedRefs.length === 0) { toast.error("Select designs from the previous stage"); return; }
 
     setIsGenerating(true);
     try {
@@ -258,16 +263,16 @@ const GeneratePage = () => {
       const annotationContext = annotationParts.join("\n");
 
       // Build design notes from selected previous-stage designs
-      const designNotes = selectedPrevDesigns
+      const designNotes = effectivePrevDesigns
         .filter((d) => d.notes && d.notes.trim().length > 0)
         .map((d) => `Design note: ${d.notes}`)
         .join("\n");
 
       const fullAnnotationContext = [annotationContext, designNotes].filter(Boolean).join("\n\n");
 
-      // Prioritize: previous stage designs first, then mood board refs, then collection refs
+      // Prioritize: focused/selected previous stage designs first, then mood board refs, then collection refs
       const imageUrls = [
-        ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+        ...effectivePrevDesigns.slice(0, 4).map((d) => d.url),
         ...moodBoardRefs.slice(0, 4).map((mb) => mb.src),
         ...selectedRefs.slice(0, 4).map((img) => img.src),
       ].slice(0, 8);
@@ -628,15 +633,25 @@ const GeneratePage = () => {
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
               const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
+              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
               return (
-                <div className="space-y-1.5">
+                <div className="space-y-2">
                   <label className="text-xs font-medium text-foreground font-body">
                     Selected from {prevStage === "concept" ? "Concepts" : "Designs"} ({prevSelected.length})
+                    {prevSelected.length > 0 && <span className="text-muted-foreground ml-1">— click to focus</span>}
                   </label>
                   {prevSelected.length > 0 ? (
                     <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
                       {prevSelected.map((d) => (
-                        <div key={d.id} className="rounded-md overflow-hidden border border-primary/30 aspect-[3/4]">
+                        <div
+                          key={d.id}
+                          onClick={() => setFocusedDesignId(focusedDesignId === d.id ? null : d.id)}
+                          className={`rounded-md overflow-hidden aspect-[3/4] cursor-pointer transition-all ${
+                            focusedDesignId === d.id
+                              ? "border-2 border-primary ring-2 ring-primary/30"
+                              : "border border-primary/30 hover:border-primary/60"
+                          }`}
+                        >
                           <img src={d.url} alt={d.prompt} className="w-full h-full object-cover" />
                         </div>
                       ))}
@@ -645,6 +660,31 @@ const GeneratePage = () => {
                     <p className="text-xs text-muted-foreground font-body">
                       Go back to {prevStage === "concept" ? "Concepts" : "Designs"} and select items to refine
                     </p>
+                  )}
+
+                  {/* Focused design detail panel */}
+                  {focusedDesign && (
+                    <div className="border border-primary/30 rounded-xl bg-card p-3 space-y-2 animate-fade-in">
+                      <div className="flex items-start gap-3">
+                        <div className="w-24 h-32 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                          <img src={focusedDesign.url} alt={focusedDesign.prompt} className="w-full h-full object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <p className="text-[11px] text-muted-foreground font-body truncate">Original: {focusedDesign.prompt}</p>
+                          {focusedDesign.notes && (
+                            <p className="text-[10px] text-accent-foreground/70 bg-accent/30 rounded px-1.5 py-0.5 line-clamp-2 font-body">
+                              Notes: {focusedDesign.notes}
+                            </p>
+                          )}
+                          {focusedDesign.citation && (
+                            <p className="text-[10px] text-muted-foreground font-body line-clamp-2">Citation: {focusedDesign.citation}</p>
+                          )}
+                        </div>
+                      </div>
+                      <p className="text-[10px] text-primary font-body font-medium">
+                        Working on this image — your prompt and tags will target this design specifically
+                      </p>
+                    </div>
                   )}
                 </div>
               );
