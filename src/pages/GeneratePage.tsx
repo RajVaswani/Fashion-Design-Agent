@@ -122,6 +122,12 @@ const GeneratePage = () => {
     }
   };
 
+  const handleUpdateNotes = (id: string, notes: string) => {
+    setDesigns((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, notes } : d))
+    );
+  };
+
   const handlePromoteSelected = async () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
