@@ -29,12 +29,16 @@ const DesignResults = ({
   onToggleSelect,
   onPromoteSelected,
   onUpdateNotes,
+  onDeleteDesign,
+  onEnhanceDesign,
   isGenerating = false,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [noteText, setNoteText] = useState("");
   const [viewingCitationId, setViewingCitationId] = useState<string | null>(null);
+  const [enhancingId, setEnhancingId] = useState<string | null>(null);
+  const [enhancePrompt, setEnhancePrompt] = useState("");
 
   const stageDesigns = designs.filter((d) => d.stage === stage);
   const selectedCount = stageDesigns.filter((d) => d.selected).length;
