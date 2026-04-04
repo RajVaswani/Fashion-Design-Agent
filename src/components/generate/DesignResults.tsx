@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2, Trash2, Wand2 } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2, Trash2, Wand2, Target } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -13,6 +13,8 @@ interface DesignResultsProps {
   onUpdateNotes?: (id: string, notes: string) => void;
   onDeleteDesign?: (id: string) => void;
   onEnhanceDesign?: (id: string, enhancePrompt: string) => void;
+  onFocusDesign?: (id: string) => void;
+  focusedDesignId?: string | null;
   isGenerating?: boolean;
 }
 
@@ -31,6 +33,8 @@ const DesignResults = ({
   onUpdateNotes,
   onDeleteDesign,
   onEnhanceDesign,
+  onFocusDesign,
+  focusedDesignId,
   isGenerating = false,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -117,7 +121,7 @@ const DesignResults = ({
             <div
               key={item.id}
               className={`group relative rounded-lg overflow-hidden border bg-card animate-fade-in transition-all ${
-                item.selected ? "border-primary ring-1 ring-primary/30" : "border-border"
+                item.selected ? "border-primary ring-1 ring-primary/30" : focusedDesignId === item.id ? "border-primary/60 ring-1 ring-primary/20" : "border-border"
               }`}
             >
               <div
@@ -164,6 +168,16 @@ const DesignResults = ({
                     {item.prompt}
                   </span>
                   <div className="flex items-center gap-1">
+                    {/* Focus button — design & realistic stages */}
+                    {(stage === "design" || stage === "realistic") && onFocusDesign && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onFocusDesign(item.id); }}
+                        className={`p-1 transition-colors ${focusedDesignId === item.id ? "text-primary" : "text-muted-foreground hover:text-primary"}`}
+                        title="Focus on this design to improve it"
+                      >
+                        <Target className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     {/* Enhance button — design & realistic stages */}
                     {(stage === "design" || stage === "realistic") && onEnhanceDesign && (
                       <button

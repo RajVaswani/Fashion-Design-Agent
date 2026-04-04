@@ -232,8 +232,9 @@ const GeneratePage = () => {
     const previousStage: DesignStage | null = stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
     const selectedPrevDesigns = previousStage ? designs.filter((d) => d.stage === previousStage && d.selected) : [];
 
-    // If a specific design is focused, use only that one
-    const focusedDesign = focusedDesignId ? selectedPrevDesigns.find((d) => d.id === focusedDesignId) : null;
+    // If a specific design is focused, use only that one (can be from prev stage or current stage)
+    const allCandidates = [...selectedPrevDesigns, ...designs.filter((d) => d.stage === stage)];
+    const focusedDesign = focusedDesignId ? allCandidates.find((d) => d.id === focusedDesignId) : null;
     const effectivePrevDesigns = focusedDesign ? [focusedDesign] : selectedPrevDesigns;
 
     if (stage === "concept" && selectedRefs.length === 0 && moodBoardRefs.length === 0) { toast.error("Select at least one reference (collection or mood board)"); return; }
@@ -680,11 +681,14 @@ const GeneratePage = () => {
           </div>
 
           <div className="space-y-4">
-            {/* Focused design panel — shown when user clicks a shortlisted image */}
+            {/* Focused design panel — shown when user clicks a shortlisted image or a current-stage design */}
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
-              const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
-              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
+              const allCandidates = [
+                ...designs.filter((d) => d.stage === prevStage && d.selected),
+                ...designs.filter((d) => d.stage === stage),
+              ];
+              const focusedDesign = focusedDesignId ? allCandidates.find((d) => d.id === focusedDesignId) : null;
               if (!focusedDesign) return null;
               return (
                 <div className="border border-primary/30 rounded-xl bg-card p-3 space-y-2 animate-fade-in">
@@ -724,6 +728,8 @@ const GeneratePage = () => {
               onUpdateNotes={handleUpdateNotes}
               onDeleteDesign={handleDeleteDesign}
               onEnhanceDesign={handleEnhanceDesign}
+              onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
+              focusedDesignId={focusedDesignId}
               isGenerating={isGenerating}
             />
           </div>
