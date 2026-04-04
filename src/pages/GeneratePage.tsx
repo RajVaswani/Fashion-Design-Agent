@@ -68,6 +68,7 @@ const GeneratePage = () => {
       setDesigns(p.designs);
       setSelectedCollectionIds(p.collectionIds);
       setStage(p.status as DesignStage || "concept");
+      setMasterPrompt(p.masterPrompt || "");
       setLoadingProject(false);
     }).catch(() => {
       toast.error("Project not found");
