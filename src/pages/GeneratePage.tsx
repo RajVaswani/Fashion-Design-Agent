@@ -472,37 +472,66 @@ const GeneratePage = () => {
                   </div>
                 </div>
 
-                {/* Collections */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground font-body">
-                    Reference Collections
-                    {selectedCollectionIds.length > 0 && <span className="text-primary ml-1">({selectedCollectionIds.length})</span>}
-                  </label>
-                  <CollectionSelector
-                    collections={collections}
-                    selectedIds={selectedCollectionIds}
-                    onToggle={toggleCollection}
-                    loading={loadingCollections}
-                    onCollectionCreated={(col) => {
-                      setCollections((prev) => [col, ...prev]);
-                      toggleCollection(col.id);
-                    }}
-                  />
-                </div>
-
-                {/* Reference images */}
-                {referenceImages.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground font-body">
-                      Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
-                    </label>
-                    <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
-                      {referenceImages.map((img) => (
-                        <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
-                      ))}
-                    </div>
+                {/* Reference Sources - Tabbed */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setConceptRefTab("collections")}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-body font-medium transition-all ${
+                        conceptRefTab === "collections"
+                          ? "bg-primary/15 border border-primary text-primary"
+                          : "border border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      Collections
+                      {selectedCollectionIds.length > 0 && <span className="ml-1">({selectedCollectionIds.length})</span>}
+                    </button>
+                    <button
+                      onClick={() => setConceptRefTab("moodboard")}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-body font-medium transition-all ${
+                        conceptRefTab === "moodboard"
+                          ? "bg-primary/15 border border-primary text-primary"
+                          : "border border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      Mood Board PDF
+                      {moodBoardRefs.length > 0 && <span className="ml-1">({moodBoardRefs.length})</span>}
+                    </button>
                   </div>
-                )}
+
+                  {conceptRefTab === "collections" && (
+                    <>
+                      <CollectionSelector
+                        collections={collections}
+                        selectedIds={selectedCollectionIds}
+                        onToggle={toggleCollection}
+                        loading={loadingCollections}
+                        onCollectionCreated={(col) => {
+                          setCollections((prev) => [col, ...prev]);
+                          toggleCollection(col.id);
+                        }}
+                      />
+                      {referenceImages.length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-foreground font-body">
+                            Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
+                          </label>
+                          <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
+                            {referenceImages.map((img) => (
+                              <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {conceptRefTab === "moodboard" && (
+                    <MoodBoardUploader
+                      onPagesReady={(pages) => setMoodBoardRefs(pages)}
+                    />
+                  )}
+                </div>
               </>
             )}
 
