@@ -101,12 +101,15 @@ const ProjectsPage = () => {
               placeholder="Project name (e.g. SS26 Collection)"
               className="w-full bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body mb-2"
             />
-            <input
-              value={desc}
-              onChange={(e) => setDesc(e.target.value)}
-              placeholder="Description (optional)"
-              className="w-full bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body mb-3"
-            />
+            <div className="flex items-center gap-2 mb-3">
+              <input
+                value={desc}
+                onChange={(e) => setDesc(e.target.value)}
+                placeholder="Description (optional)"
+                className="flex-1 bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body"
+              />
+              <AiImproveButton text={desc} context="project-description" onImproved={setDesc} />
+            </div>
             <div className="flex gap-2">
               <button onClick={handleCreate} disabled={!name.trim()} className="px-4 py-2 rounded-lg gradient-gold text-primary-foreground text-sm font-medium disabled:opacity-50">Create</button>
               <button onClick={() => { setShowCreate(false); setName(""); setDesc(""); }} className="px-4 py-2 rounded-lg border border-border text-foreground text-sm hover:bg-secondary transition-colors">Cancel</button>

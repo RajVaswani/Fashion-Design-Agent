@@ -335,12 +335,15 @@ const GalleryPage = () => {
                 placeholder="Collection name (e.g. Nike SS25)"
                 className="w-full bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body mb-2"
               />
-              <input
-                value={newCollectionDesc}
-                onChange={(e) => setNewCollectionDesc(e.target.value)}
-                placeholder="Description (optional)"
-                className="w-full bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body mb-3"
-              />
+              <div className="flex items-center gap-2 mb-3">
+                <input
+                  value={newCollectionDesc}
+                  onChange={(e) => setNewCollectionDesc(e.target.value)}
+                  placeholder="Description (optional)"
+                  className="flex-1 bg-secondary text-foreground text-sm px-4 py-2.5 rounded-lg border border-border outline-none placeholder:text-muted-foreground focus:border-primary/50 transition-colors font-body"
+                />
+                <AiImproveButton text={newCollectionDesc} context="collection-description" onImproved={setNewCollectionDesc} />
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateCollection}
