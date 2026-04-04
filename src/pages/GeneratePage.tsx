@@ -15,6 +15,14 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { Slider } from "@/components/ui/slider";
 
+const OUTPUT_STYLES = [
+  { value: "sketch", label: "Sketch", desc: "Hand-drawn fashion illustration" },
+  { value: "flat-2d", label: "2D Flat", desc: "Technical flat / spec drawing" },
+  { value: "3d-model", label: "3D Model", desc: "3D rendered garment on mannequin" },
+  { value: "realistic", label: "Realistic", desc: "Photorealistic on a model" },
+] as const;
+type OutputStyle = typeof OUTPUT_STYLES[number]["value"];
+
 const STYLE_TAGS = [
   "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
   "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
@@ -49,7 +57,8 @@ const GeneratePage = () => {
 
   // Style controls
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [strengthIndex, setStrengthIndex] = useState(2); // default High
+  const [strengthIndex, setStrengthIndex] = useState(2);
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
@@ -183,6 +192,7 @@ const GeneratePage = () => {
           stage,
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
+          outputStyle,
         },
       });
       if (error) throw error;
@@ -282,6 +292,27 @@ const GeneratePage = () => {
                 placeholder={stagePromptHints[stage]}
                 className="w-full h-28 bg-card border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
               />
+            </div>
+
+            {/* Output Style */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground font-body">Output Style</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {OUTPUT_STYLES.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setOutputStyle(s.value)}
+                    className={`px-2 py-2 rounded-lg text-center text-[11px] font-body transition-all ${
+                      outputStyle === s.value
+                        ? "bg-primary/15 border border-primary text-primary"
+                        : "border border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">{s.label}</div>
+                    <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Style Tags */}

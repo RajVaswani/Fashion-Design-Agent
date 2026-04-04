@@ -64,6 +64,7 @@ serve(async (req) => {
       stage = "concept",
       styleTags = [],
       referenceStrength = "high",
+      outputStyle = "sketch",
     } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -91,7 +92,15 @@ serve(async (req) => {
     const strengthInstruction = strengthDescriptions[referenceStrength] || strengthDescriptions.high;
 
     // Build rich user message
-    let userText = `## Reference Strength\n${strengthInstruction}\n\n`;
+    const outputStyleDescriptions: Record<string, string> = {
+      sketch: "Output as a hand-drawn fashion sketch/illustration with pencil or ink style linework, expressive strokes, and fashion figure proportions.",
+      "flat-2d": "Output as a clean 2D technical flat / spec drawing. Show the garment laid flat with precise construction lines, no model, white background, front and back views if possible.",
+      "3d-model": "Output as a 3D rendered garment on a mannequin or dress form. Show realistic fabric drape and form with studio lighting, no human model.",
+      realistic: "Output as a photorealistic image of the garment worn by a model in a professional studio or e-commerce setting.",
+    };
+
+    let userText = `## Output Style\n${outputStyleDescriptions[outputStyle] || outputStyleDescriptions.sketch}\n\n`;
+    userText += `## Reference Strength\n${strengthInstruction}\n\n`;
     userText += `## Design Prompt\n${prompt}\n`;
 
     if (styleTags.length > 0) {
