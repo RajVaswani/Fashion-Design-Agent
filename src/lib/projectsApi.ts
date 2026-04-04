@@ -142,7 +142,7 @@ export const projectsApi = {
     if (error) throw error;
   },
 
-  async saveDesign(projectId: string, design: { prompt: string; imageUrl: string; stage: DesignStage }): Promise<GeneratedDesign> {
+  async saveDesign(projectId: string, design: { prompt: string; imageUrl: string; stage: DesignStage; citation?: string }): Promise<GeneratedDesign> {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
@@ -154,7 +154,8 @@ export const projectsApi = {
         prompt: design.prompt,
         image_url: design.imageUrl,
         stage: design.stage,
-      })
+        citation: design.citation || "",
+      } as any)
       .select()
       .single();
     if (error) throw error;
@@ -165,6 +166,8 @@ export const projectsApi = {
       prompt: data.prompt,
       stage: data.stage as DesignStage,
       selected: data.selected,
+      citation: (data as any).citation || "",
+    };
     };
   },
 
