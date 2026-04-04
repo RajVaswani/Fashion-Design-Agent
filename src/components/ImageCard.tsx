@@ -8,6 +8,7 @@ interface ImageCardProps {
   onToggleSelect?: (id: string) => void;
   onAddAnnotation?: (id: string, annotation: Annotation) => void;
   onRemoveAnnotation?: (id: string, annotationId: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const ImageCard = ({
@@ -16,6 +17,7 @@ const ImageCard = ({
   onToggleSelect,
   onAddAnnotation,
   onRemoveAnnotation,
+  onDelete,
 }: ImageCardProps) => {
   const [annotating, setAnnotating] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(false);
