@@ -661,31 +661,6 @@ const GeneratePage = () => {
                       Go back to {prevStage === "concept" ? "Concepts" : "Designs"} and select items to refine
                     </p>
                   )}
-
-                  {/* Focused design detail panel */}
-                  {focusedDesign && (
-                    <div className="border border-primary/30 rounded-xl bg-card p-3 space-y-2 animate-fade-in">
-                      <div className="flex items-start gap-3">
-                        <div className="w-24 h-32 rounded-lg overflow-hidden border border-border flex-shrink-0">
-                          <img src={focusedDesign.url} alt={focusedDesign.prompt} className="w-full h-full object-cover" />
-                        </div>
-                        <div className="flex-1 min-w-0 space-y-1">
-                          <p className="text-[11px] text-muted-foreground font-body truncate">Original: {focusedDesign.prompt}</p>
-                          {focusedDesign.notes && (
-                            <p className="text-[10px] text-accent-foreground/70 bg-accent/30 rounded px-1.5 py-0.5 line-clamp-2 font-body">
-                              Notes: {focusedDesign.notes}
-                            </p>
-                          )}
-                          {focusedDesign.citation && (
-                            <p className="text-[10px] text-muted-foreground font-body line-clamp-2">Citation: {focusedDesign.citation}</p>
-                          )}
-                        </div>
-                      </div>
-                      <p className="text-[10px] text-primary font-body font-medium">
-                        Working on this image — your prompt and tags will target this design specifically
-                      </p>
-                    </div>
-                  )}
                 </div>
               );
             })()}
