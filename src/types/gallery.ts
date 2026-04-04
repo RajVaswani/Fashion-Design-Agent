@@ -29,4 +29,5 @@ export interface GeneratedDesign {
   prompt: string;
   stage: DesignStage;
   selected?: boolean;
+  notes?: string;
 }
