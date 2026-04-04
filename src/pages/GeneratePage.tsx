@@ -382,6 +382,14 @@ const GeneratePage = () => {
           <StageIndicator current={stage} onChange={setStage} />
         </div>
 
+        {stage === "moodboard" ? (
+          <MoodBoardExport
+            designs={designs}
+            projectName={project?.name || "Untitled"}
+            masterPrompt={masterPrompt}
+            onClose={() => setStage("realistic")}
+          />
+        ) : (
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8">
           <div className="space-y-5">
             <div>
