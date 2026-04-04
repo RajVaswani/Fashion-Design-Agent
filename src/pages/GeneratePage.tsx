@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import StageIndicator from "@/components/generate/StageIndicator";
 import CollectionSelector from "@/components/generate/CollectionSelector";
+import MoodBoardUploader from "@/components/generate/MoodBoardUploader";
 import DesignResults from "@/components/generate/DesignResults";
 import ImageCard from "@/components/ImageCard";
 import { collectionsApi } from "@/lib/collectionsApi";
