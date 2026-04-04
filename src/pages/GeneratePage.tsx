@@ -232,8 +232,9 @@ const GeneratePage = () => {
     const previousStage: DesignStage | null = stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
     const selectedPrevDesigns = previousStage ? designs.filter((d) => d.stage === previousStage && d.selected) : [];
 
-    // If a specific design is focused, use only that one
-    const focusedDesign = focusedDesignId ? selectedPrevDesigns.find((d) => d.id === focusedDesignId) : null;
+    // If a specific design is focused, use only that one (can be from prev stage or current stage)
+    const allCandidates = [...selectedPrevDesigns, ...designs.filter((d) => d.stage === stage)];
+    const focusedDesign = focusedDesignId ? allCandidates.find((d) => d.id === focusedDesignId) : null;
     const effectivePrevDesigns = focusedDesign ? [focusedDesign] : selectedPrevDesigns;
 
     if (stage === "concept" && selectedRefs.length === 0 && moodBoardRefs.length === 0) { toast.error("Select at least one reference (collection or mood board)"); return; }
