@@ -5,6 +5,7 @@ export interface Project {
   id: string;
   name: string;
   description?: string;
+  masterPrompt?: string;
   status: string;
   createdAt: string;
   updatedAt: string;
@@ -46,6 +47,7 @@ export const projectsApi = {
       id: p.id,
       name: p.name,
       description: p.description || undefined,
+      masterPrompt: (p as any).master_prompt || undefined,
       status: p.status,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
@@ -67,6 +69,7 @@ export const projectsApi = {
       id: p.id,
       name: p.name,
       description: p.description || undefined,
+      masterPrompt: (p as any).master_prompt || undefined,
       status: p.status,
       createdAt: p.created_at,
       updatedAt: p.updated_at,
@@ -97,12 +100,18 @@ export const projectsApi = {
       id: data.id,
       name: data.name,
       description: data.description || undefined,
+      masterPrompt: (data as any).master_prompt || undefined,
       status: data.status,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
       collectionIds: [],
       designs: [],
     };
+  },
+
+  async updateMasterPrompt(id: string, masterPrompt: string): Promise<void> {
+    const { error } = await supabase.from("projects").update({ master_prompt: masterPrompt } as any).eq("id", id);
+    if (error) throw error;
   },
 
   async deleteProject(id: string): Promise<void> {

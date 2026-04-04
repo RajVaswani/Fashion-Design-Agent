@@ -59,6 +59,7 @@ const GeneratePage = () => {
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [strengthIndex, setStrengthIndex] = useState(2);
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
+  const [masterPrompt, setMasterPrompt] = useState("");
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
@@ -67,6 +68,7 @@ const GeneratePage = () => {
       setDesigns(p.designs);
       setSelectedCollectionIds(p.collectionIds);
       setStage(p.status as DesignStage || "concept");
+      setMasterPrompt(p.masterPrompt || "");
       setLoadingProject(false);
     }).catch(() => {
       toast.error("Project not found");
@@ -193,6 +195,7 @@ const GeneratePage = () => {
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
           outputStyle,
+          masterPrompt: masterPrompt.trim() || undefined,
         },
       });
       if (error) throw error;
@@ -255,6 +258,23 @@ const GeneratePage = () => {
               <h2 className="text-lg font-display font-bold text-foreground">{project.name}</h2>
               {project.description && <p className="text-xs text-muted-foreground font-body">{project.description}</p>}
             </div>
+          </div>
+        )}
+
+        {/* Master Prompt */}
+        {project && (
+          <div className="mb-4 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-medium text-foreground font-body">Project Theme / Master Prompt</label>
+              <AiImproveButton text={masterPrompt} context="design-prompt" onImproved={(t) => { setMasterPrompt(t); if (projectId) projectsApi.updateMasterPrompt(projectId, t); }} />
+            </div>
+            <textarea
+              value={masterPrompt}
+              onChange={(e) => setMasterPrompt(e.target.value)}
+              onBlur={() => { if (projectId) projectsApi.updateMasterPrompt(projectId, masterPrompt); }}
+              placeholder="e.g. 'A luxury resort-wear collection inspired by Mediterranean architecture — earthy tones, flowing fabrics, relaxed elegance'"
+              className="w-full h-16 bg-card border border-border rounded-lg p-3 text-xs text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
+            />
           </div>
         )}
 
