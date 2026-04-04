@@ -191,6 +191,7 @@ const GeneratePage = () => {
           stage,
           styleTags: selectedTags,
           referenceStrength: strengthValues[strengthIndex],
+          outputStyle,
         },
       });
       if (error) throw error;
