@@ -6,13 +6,29 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const stageSystemPrompts: Record<string, string> = {
+  concept: `You are a fashion designer AI. Generate creative clothing design CONCEPTS based on the user's prompt and reference images. 
+The output should be fashion illustration style — bold, expressive, showing the design idea clearly. 
+Focus on silhouette, color palette, and overall mood. Multiple variations are encouraged.`,
+
+  design: `You are a fashion designer AI. REFINE and improve the selected clothing design based on the user's refinement notes.
+Focus on adding detail: fabric texture, stitching, embellishments, fit, construction details.
+The output should look like a detailed fashion design sketch or technical flat with clear design elements.
+Use the provided reference designs as the base and apply the requested changes.`,
+
+  realistic: `You are a fashion designer AI. Create a PHOTOREALISTIC render of the clothing design.
+Show the garment on a model in a professional studio or e-commerce setting.
+The output should look like a real product photo or lookbook image.
+Maintain the design details from the reference images while making it look like a real photograph.`,
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { prompt, referenceImages } = await req.json();
+    const { prompt, referenceImages, annotationContext, stage = "concept" } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -26,17 +42,19 @@ serve(async (req) => {
       );
     }
 
-    // Build the message content with text + reference images
-    const content: any[] = [
-      {
-        type: "text",
-        text: `You are a fashion designer AI. Generate a new clothing design based on the following prompt and the reference images provided. The generated image should be a professional fashion design illustration or photo-realistic clothing render.\n\nDesign prompt: ${prompt}`,
-      },
-    ];
+    const systemPrompt = stageSystemPrompts[stage] || stageSystemPrompts.concept;
 
-    // Add reference images (base64 data URLs)
+    // Build user message with context
+    let userText = `Design prompt: ${prompt}`;
+    if (annotationContext) {
+      userText += `\n\nReference design notes from the brand collection: ${annotationContext}`;
+    }
+
+    const content: any[] = [{ type: "text", text: userText }];
+
+    // Add reference images
     if (referenceImages && Array.isArray(referenceImages)) {
-      for (const imgUrl of referenceImages.slice(0, 4)) {
+      for (const imgUrl of referenceImages.slice(0, 8)) {
         content.push({
           type: "image_url",
           image_url: { url: imgUrl },
@@ -54,7 +72,10 @@ serve(async (req) => {
         },
         body: JSON.stringify({
           model: "google/gemini-3-pro-image-preview",
-          messages: [{ role: "user", content }],
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content },
+          ],
           modalities: ["image", "text"],
         }),
       }
