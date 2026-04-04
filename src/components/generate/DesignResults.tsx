@@ -164,6 +164,16 @@ const DesignResults = ({
                     {item.prompt}
                   </span>
                   <div className="flex items-center gap-1">
+                    {/* Enhance button — design & realistic stages */}
+                    {(stage === "design" || stage === "realistic") && onEnhanceDesign && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setEnhancingId(item.id); setEnhancePrompt(""); }}
+                        className="p-1 text-muted-foreground hover:text-primary transition-colors"
+                        title="Enhance this design"
+                      >
+                        <Wand2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <button
                       onClick={(e) => { e.stopPropagation(); openNoteEditor(item); }}
                       className={`p-1 transition-colors ${item.notes ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
@@ -186,6 +196,15 @@ const DesignResults = ({
                     >
                       <Download className="w-3.5 h-3.5" />
                     </a>
+                    {onDeleteDesign && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onDeleteDesign(item.id); }}
+                        className="p-1 text-muted-foreground hover:text-destructive transition-colors"
+                        title="Delete design"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 </div>
                 {/* Show note preview if exists */}
