@@ -165,15 +165,13 @@ const DesignResults = ({
                     >
                       <StickyNote className="w-3.5 h-3.5" />
                     </button>
-                    {item.citation && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); setViewingCitationId(item.id); }}
-                        className="p-1 text-primary/70 hover:text-primary transition-colors"
-                        title="View design citation"
-                      >
-                        <FileText className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setViewingCitationId(item.id); }}
+                      className={`p-1 transition-colors ${item.citation ? "text-primary/70 hover:text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                      title="View design citation"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                    </button>
                     <a
                       href={item.url}
                       download={`design-${item.id}.png`}
