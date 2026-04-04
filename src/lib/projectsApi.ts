@@ -37,6 +37,7 @@ export const projectsApi = {
         prompt: d.prompt,
         stage: d.stage as DesignStage,
         selected: d.selected,
+        notes: (d as any).notes || "",
       });
       desByProject.set(d.project_id, list);
     }
