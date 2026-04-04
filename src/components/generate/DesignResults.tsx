@@ -165,6 +165,15 @@ const DesignResults = ({
                     >
                       <StickyNote className="w-3.5 h-3.5" />
                     </button>
+                    {item.citation && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setViewingCitationId(item.id); }}
+                        className="p-1 text-primary/70 hover:text-primary transition-colors"
+                        title="View design citation"
+                      >
+                        <FileText className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                     <a
                       href={item.url}
                       download={`design-${item.id}.png`}
@@ -174,19 +183,6 @@ const DesignResults = ({
                       <Download className="w-3.5 h-3.5" />
                     </a>
                   </div>
-                </div>
-                {/* Show citation if exists */}
-                {item.citation && (
-                  <details className="group/citation">
-                    <summary className="flex items-center gap-1 text-[10px] text-primary/70 cursor-pointer hover:text-primary font-body">
-                      <FileText className="w-3 h-3" />
-                      Design Citation
-                    </summary>
-                    <p className="text-[10px] text-muted-foreground bg-secondary/50 rounded px-1.5 py-1 mt-1 font-body leading-relaxed">
-                      {item.citation}
-                    </p>
-                  </details>
-                )}
                 {/* Show note preview if exists */}
                 {item.notes && (
                   <p
