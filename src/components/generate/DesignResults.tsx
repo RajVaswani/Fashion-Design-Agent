@@ -53,7 +53,7 @@ const DesignResults = ({
     setEditingNoteId(null);
   }, [editingNoteId, noteText, onUpdateNotes]);
 
-  if (stageDesigns.length === 0) {
+  if (stageDesigns.length === 0 && !isGenerating) {
     return (
       <div className="border border-border rounded-xl flex flex-col items-center justify-center py-20 bg-card/50">
         <Sparkles className="w-10 h-10 text-muted-foreground mb-3" />
@@ -67,6 +67,23 @@ const DesignResults = ({
       </div>
     );
   }
+
+  const LoadingCards = () => (
+    <>
+      {[1, 2, 3, 4].map((i) => (
+        <div key={i} className="rounded-lg overflow-hidden border border-border bg-card animate-pulse">
+          <div className="aspect-[3/4] relative bg-secondary flex flex-col items-center justify-center gap-3">
+            <Loader2 className="w-8 h-8 text-primary/40 animate-spin" />
+            <p className="text-xs text-muted-foreground font-body">Generating…</p>
+          </div>
+          <div className="p-2 space-y-1.5">
+            <Skeleton className="h-3 w-3/4" />
+            <Skeleton className="h-3 w-1/2" />
+          </div>
+        </div>
+      ))}
+    </>
+  );
 
   return (
     <>
