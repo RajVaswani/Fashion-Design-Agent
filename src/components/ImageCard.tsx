@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, MessageCircle, X, Plus } from "lucide-react";
+import { Check, MessageCircle, X, Plus, Trash2 } from "lucide-react";
 import type { GalleryImage, Annotation } from "@/types/gallery";
 
 interface ImageCardProps {
@@ -8,6 +8,7 @@ interface ImageCardProps {
   onToggleSelect?: (id: string) => void;
   onAddAnnotation?: (id: string, annotation: Annotation) => void;
   onRemoveAnnotation?: (id: string, annotationId: string) => void;
+  onDelete?: (id: string) => void;
 }
 
 const ImageCard = ({
@@ -16,6 +17,7 @@ const ImageCard = ({
   onToggleSelect,
   onAddAnnotation,
   onRemoveAnnotation,
+  onDelete,
 }: ImageCardProps) => {
   const [annotating, setAnnotating] = useState(false);
   const [showAnnotations, setShowAnnotations] = useState(false);
@@ -156,6 +158,15 @@ const ImageCard = ({
               title="Annotate"
             >
               <Plus className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(image.id)}
+              className="p-1 rounded text-muted-foreground hover:text-destructive transition-colors"
+              title="Delete"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
             </button>
           )}
         </div>

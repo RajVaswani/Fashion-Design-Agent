@@ -47,6 +47,10 @@ const GalleryPage = () => {
     );
   };
 
+  const handleDeleteImage = (imageId: string) => {
+    setImages((prev) => prev.filter((img) => img.id !== imageId));
+  };
+
   return (
     <Layout>
       <div className="container py-10">
@@ -99,6 +103,7 @@ const GalleryPage = () => {
                 image={img}
                 onAddAnnotation={handleAddAnnotation}
                 onRemoveAnnotation={handleRemoveAnnotation}
+                onDelete={handleDeleteImage}
               />
             ))}
             {/* Add more card */}
