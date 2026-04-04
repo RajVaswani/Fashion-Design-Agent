@@ -154,6 +154,62 @@ const GeneratePage = () => {
     );
   };
 
+  const handleDeleteDesign = async (id: string) => {
+    setDesigns((prev) => prev.filter((d) => d.id !== id));
+    try {
+      await supabase.from("project_designs").delete().eq("id", id);
+    } catch (err) {
+      console.error("Failed to delete design", err);
+    }
+    toast.success("Design deleted");
+  };
+
+  const handleEnhanceDesign = async (id: string, enhancePrompt: string) => {
+    const design = designs.find((d) => d.id === id);
+    if (!design) return;
+
+    setIsGenerating(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-design", {
+        body: {
+          prompt: enhancePrompt,
+          referenceImages: [design.url],
+          annotationContext: design.notes ? `Design note: ${design.notes}` : "",
+          stage,
+          styleTags: selectedTags,
+          referenceStrength: "high",
+          outputStyle,
+          masterPrompt: masterPrompt.trim() || undefined,
+        },
+      });
+      if (error) throw error;
+
+      if (data?.images && data.images.length > 0) {
+        const citation = data.text || "";
+        const newDesigns: GeneratedDesign[] = [];
+        for (const img of data.images) {
+          const imageUrl = img.url || img.image_url?.url;
+          if (!imageUrl) continue;
+          if (projectId) {
+            const saved = await projectsApi.saveDesign(projectId, { prompt: enhancePrompt, imageUrl, stage, citation });
+            newDesigns.push(saved);
+          } else {
+            newDesigns.push({ id: crypto.randomUUID(), url: imageUrl, prompt: enhancePrompt, stage, selected: false, citation });
+          }
+        }
+        setDesigns((prev) => [...newDesigns, ...prev]);
+        toast.success("Enhanced design generated!");
+      } else {
+        toast.error("No image generated. Try a different prompt.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err?.message || "Enhancement failed.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handlePromoteSelected = async () => {
     const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
     setStage(nextStage);
