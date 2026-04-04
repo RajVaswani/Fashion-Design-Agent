@@ -56,7 +56,8 @@ const GeneratePage = () => {
 
   // Style controls
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [strengthIndex, setStrengthIndex] = useState(2); // default High
+  const [strengthIndex, setStrengthIndex] = useState(2);
+  const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
