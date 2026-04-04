@@ -27,6 +27,7 @@ const DesignResults = ({
   onToggleSelect,
   onPromoteSelected,
   onUpdateNotes,
+  isGenerating = false,
 }: DesignResultsProps) => {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
