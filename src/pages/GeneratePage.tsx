@@ -751,16 +751,11 @@ const GeneratePage = () => {
             )}
           </div>
         </div>
-
-        {/* Mood Board Stage — Full Width */}
-        {stage === "moodboard" && (
-          <MoodBoardExport
-            designs={designs}
-            projectName={project?.name || "Untitled"}
-            masterPrompt={masterPrompt}
-            onClose={() => setStage("realistic")}
-          />
         )}
+      </div>
+    </Layout>
+  );
+};
       </div>
     </Layout>
   );
