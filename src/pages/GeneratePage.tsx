@@ -726,21 +726,33 @@ const GeneratePage = () => {
               );
             })()}
 
-            <DesignResults
-              designs={designs}
-              stage={stage}
-              selectable={stage !== "realistic"}
-              onToggleSelect={toggleDesignSelect}
-              onPromoteSelected={handlePromoteSelected}
-              onUpdateNotes={handleUpdateNotes}
-              onDeleteDesign={handleDeleteDesign}
-              onEnhanceDesign={handleEnhanceDesign}
-              onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
-              focusedDesignId={focusedDesignId}
-              isGenerating={isGenerating}
-            />
+            {stage !== "moodboard" && (
+              <DesignResults
+                designs={designs}
+                stage={stage}
+                selectable={stage !== "moodboard"}
+                onToggleSelect={toggleDesignSelect}
+                onPromoteSelected={handlePromoteSelected}
+                onUpdateNotes={handleUpdateNotes}
+                onDeleteDesign={handleDeleteDesign}
+                onEnhanceDesign={handleEnhanceDesign}
+                onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
+                focusedDesignId={focusedDesignId}
+                isGenerating={isGenerating}
+              />
+            )}
           </div>
         </div>
+
+        {/* Mood Board Stage — Full Width */}
+        {stage === "moodboard" && (
+          <MoodBoardExport
+            designs={designs}
+            projectName={project?.name || "Untitled"}
+            masterPrompt={masterPrompt}
+            onClose={() => setStage("realistic")}
+          />
+        )}
       </div>
     </Layout>
   );
