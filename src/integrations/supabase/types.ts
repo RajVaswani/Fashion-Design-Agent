@@ -152,6 +152,7 @@ export type Database = {
           created_at: string
           id: string
           image_url: string
+          notes: string | null
           project_id: string
           prompt: string
           selected: boolean
@@ -162,6 +163,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url: string
+          notes?: string | null
           project_id: string
           prompt: string
           selected?: boolean
@@ -172,6 +174,7 @@ export type Database = {
           created_at?: string
           id?: string
           image_url?: string
+          notes?: string | null
           project_id?: string
           prompt?: string
           selected?: boolean
