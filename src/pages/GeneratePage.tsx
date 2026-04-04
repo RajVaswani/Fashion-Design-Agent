@@ -1,38 +1,40 @@
-import { useState } from "react";
-import { Sparkles, Loader2, ImageIcon, Download } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Sparkles, Loader2, ImageIcon, Download, FolderOpen } from "lucide-react";
 import Layout from "@/components/Layout";
 import ImageCard from "@/components/ImageCard";
-import type { GalleryImage } from "@/types/gallery";
+import { collectionsApi } from "@/lib/collectionsApi";
+import type { GalleryImage, Collection } from "@/types/gallery";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 const GeneratePage = () => {
   const [prompt, setPrompt] = useState("");
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
   const [referenceImages, setReferenceImages] = useState<GalleryImage[]>([]);
-  const [generatedImages, setGeneratedImages] = useState<
-    { url: string; prompt: string }[]
-  >([]);
+  const [generatedImages, setGeneratedImages] = useState<{ url: string; prompt: string }[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [loadingCollections, setLoadingCollections] = useState(true);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const newImage: GalleryImage = {
-          id: crypto.randomUUID(),
-          src: ev.target?.result as string,
-          name: file.name,
-          annotations: [],
-          selected: true,
-        };
-        setReferenceImages((prev) => [...prev, newImage]);
-      };
-      reader.readAsDataURL(file);
-    });
-    e.target.value = "";
-  };
+  // Load collections
+  useEffect(() => {
+    collectionsApi.list().then((data) => {
+      setCollections(data);
+      setLoadingCollections(false);
+    }).catch(() => setLoadingCollections(false));
+  }, []);
+
+  // When a collection is selected, load its images as references
+  useEffect(() => {
+    if (!selectedCollectionId) {
+      setReferenceImages([]);
+      return;
+    }
+    const col = collections.find((c) => c.id === selectedCollectionId);
+    if (col) {
+      setReferenceImages(col.images.map((img) => ({ ...img, selected: true })));
+    }
+  }, [selectedCollectionId, collections]);
 
   const toggleSelect = (id: string) => {
     setReferenceImages((prev) =>
@@ -57,15 +59,22 @@ const GeneratePage = () => {
     setIsGenerating(true);
 
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "generate-design",
-        {
-          body: {
-            prompt: prompt.trim(),
-            referenceImages: selectedRefs.map((img) => img.src),
-          },
-        }
-      );
+      // Build context from annotations
+      const annotationContext = selectedRefs
+        .flatMap((img) => img.annotations.map((a) => a.text))
+        .filter((t) => t.length > 0)
+        .join("; ");
+
+      const fullPrompt = annotationContext
+        ? `${prompt.trim()}\n\nReference design notes: ${annotationContext}`
+        : prompt.trim();
+
+      const { data, error } = await supabase.functions.invoke("generate-design", {
+        body: {
+          prompt: fullPrompt,
+          referenceImages: selectedRefs.slice(0, 4).map((img) => img.src),
+        },
+      });
 
       if (error) throw error;
 
@@ -83,9 +92,7 @@ const GeneratePage = () => {
       }
     } catch (err: any) {
       console.error(err);
-      const msg =
-        err?.message || err?.error || "Generation failed. Please try again.";
-      toast.error(msg);
+      toast.error(err?.message || "Generation failed. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -102,7 +109,7 @@ const GeneratePage = () => {
                 Design <span className="text-gradient-gold">Generator</span>
               </h1>
               <p className="text-muted-foreground text-sm mt-1 font-body">
-                Select references and describe your new design
+                Select a collection and describe your new design
               </p>
             </div>
 
@@ -119,40 +126,58 @@ const GeneratePage = () => {
               />
             </div>
 
-            {/* Reference images */}
+            {/* Collection selector */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-foreground font-body">
-                  Reference Images
-                </label>
-                <label className="text-xs text-primary cursor-pointer hover:underline font-body">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  + Add references
-                </label>
-              </div>
-
-              {referenceImages.length === 0 ? (
-                <label className="block border border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/40 transition-colors">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                  <ImageIcon className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+              <label className="text-sm font-medium text-foreground font-body">
+                Reference Collection
+              </label>
+              {loadingCollections ? (
+                <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Loading collections…
+                </div>
+              ) : collections.length === 0 ? (
+                <div className="border border-dashed border-border rounded-lg p-6 text-center">
+                  <FolderOpen className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
                   <p className="text-sm text-muted-foreground font-body">
-                    Upload brand reference images
+                    No collections yet. Go to the Gallery to create one.
                   </p>
-                </label>
+                </div>
               ) : (
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
+                  {collections.map((col) => (
+                    <button
+                      key={col.id}
+                      onClick={() =>
+                        setSelectedCollectionId(
+                          selectedCollectionId === col.id ? null : col.id
+                        )
+                      }
+                      className={`text-left p-3 rounded-lg border transition-all ${
+                        selectedCollectionId === col.id
+                          ? "border-primary bg-primary/10"
+                          : "border-border hover:border-primary/40"
+                      }`}
+                    >
+                      <p className="text-sm font-medium text-foreground font-body truncate">
+                        {col.name}
+                      </p>
+                      <p className="text-xs text-muted-foreground font-body">
+                        {col.images.length} image{col.images.length !== 1 ? "s" : ""}
+                      </p>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Selected reference images */}
+            {referenceImages.length > 0 && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground font-body">
+                  Reference Images ({referenceImages.filter((i) => i.selected).length} selected)
+                </label>
+                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
                   {referenceImages.map((img) => (
                     <ImageCard
                       key={img.id}
@@ -162,8 +187,8 @@ const GeneratePage = () => {
                     />
                   ))}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
 
             {/* Generate button */}
             <button
