@@ -6,6 +6,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import StageIndicator from "@/components/generate/StageIndicator";
 import CollectionSelector from "@/components/generate/CollectionSelector";
+import MoodBoardUploader from "@/components/generate/MoodBoardUploader";
 import DesignResults from "@/components/generate/DesignResults";
 import ImageCard from "@/components/ImageCard";
 import { collectionsApi } from "@/lib/collectionsApi";
@@ -75,6 +76,8 @@ const GeneratePage = () => {
   const [strengthIndex, setStrengthIndex] = useState(2);
   const [outputStyle, setOutputStyle] = useState<OutputStyle>("sketch");
   const [masterPrompt, setMasterPrompt] = useState("");
+  const [conceptRefTab, setConceptRefTab] = useState<"collections" | "moodboard">("collections");
+  const [moodBoardRefs, setMoodBoardRefs] = useState<{ src: string; annotations: { id: string; text: string; x: number; y: number }[] }[]>([]);
 
   useEffect(() => {
     if (!projectId) { setLoadingProject(false); return; }
@@ -228,7 +231,7 @@ const GeneratePage = () => {
     const previousStage: DesignStage | null = stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
     const selectedPrevDesigns = previousStage ? designs.filter((d) => d.stage === previousStage && d.selected) : [];
 
-    if (stage === "concept" && selectedRefs.length === 0) { toast.error("Select at least one reference collection"); return; }
+    if (stage === "concept" && selectedRefs.length === 0 && moodBoardRefs.length === 0) { toast.error("Select at least one reference (collection or mood board)"); return; }
     if (stage !== "concept" && selectedPrevDesigns.length === 0 && selectedRefs.length === 0) { toast.error("Select designs from the previous stage"); return; }
 
     setIsGenerating(true);
@@ -243,6 +246,15 @@ const GeneratePage = () => {
           );
         }
       }
+
+      // Add mood board annotations
+      for (const mb of moodBoardRefs) {
+        if (mb.annotations.length > 0) {
+          annotationParts.push(
+            `Mood board page: ${mb.annotations.map((a) => a.text).join("; ")}`
+          );
+        }
+      }
       const annotationContext = annotationParts.join("\n");
 
       // Build design notes from selected previous-stage designs
@@ -253,9 +265,10 @@ const GeneratePage = () => {
 
       const fullAnnotationContext = [annotationContext, designNotes].filter(Boolean).join("\n\n");
 
-      // Prioritize: previous stage designs first (they are the base), then ref images for brand context
+      // Prioritize: previous stage designs first, then mood board refs, then collection refs
       const imageUrls = [
         ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+        ...moodBoardRefs.slice(0, 4).map((mb) => mb.src),
         ...selectedRefs.slice(0, 4).map((img) => img.src),
       ].slice(0, 8);
 
@@ -459,37 +472,66 @@ const GeneratePage = () => {
                   </div>
                 </div>
 
-                {/* Collections */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground font-body">
-                    Reference Collections
-                    {selectedCollectionIds.length > 0 && <span className="text-primary ml-1">({selectedCollectionIds.length})</span>}
-                  </label>
-                  <CollectionSelector
-                    collections={collections}
-                    selectedIds={selectedCollectionIds}
-                    onToggle={toggleCollection}
-                    loading={loadingCollections}
-                    onCollectionCreated={(col) => {
-                      setCollections((prev) => [col, ...prev]);
-                      toggleCollection(col.id);
-                    }}
-                  />
-                </div>
-
-                {/* Reference images */}
-                {referenceImages.length > 0 && (
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-medium text-foreground font-body">
-                      Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
-                    </label>
-                    <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
-                      {referenceImages.map((img) => (
-                        <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
-                      ))}
-                    </div>
+                {/* Reference Sources - Tabbed */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => setConceptRefTab("collections")}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-body font-medium transition-all ${
+                        conceptRefTab === "collections"
+                          ? "bg-primary/15 border border-primary text-primary"
+                          : "border border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      Collections
+                      {selectedCollectionIds.length > 0 && <span className="ml-1">({selectedCollectionIds.length})</span>}
+                    </button>
+                    <button
+                      onClick={() => setConceptRefTab("moodboard")}
+                      className={`px-3 py-1.5 rounded-lg text-[11px] font-body font-medium transition-all ${
+                        conceptRefTab === "moodboard"
+                          ? "bg-primary/15 border border-primary text-primary"
+                          : "border border-border text-muted-foreground hover:border-primary/40"
+                      }`}
+                    >
+                      Mood Board PDF
+                      {moodBoardRefs.length > 0 && <span className="ml-1">({moodBoardRefs.length})</span>}
+                    </button>
                   </div>
-                )}
+
+                  {conceptRefTab === "collections" && (
+                    <>
+                      <CollectionSelector
+                        collections={collections}
+                        selectedIds={selectedCollectionIds}
+                        onToggle={toggleCollection}
+                        loading={loadingCollections}
+                        onCollectionCreated={(col) => {
+                          setCollections((prev) => [col, ...prev]);
+                          toggleCollection(col.id);
+                        }}
+                      />
+                      {referenceImages.length > 0 && (
+                        <div className="space-y-1.5">
+                          <label className="text-xs font-medium text-foreground font-body">
+                            Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
+                          </label>
+                          <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
+                            {referenceImages.map((img) => (
+                              <ImageCard key={img.id} image={img} selectable onToggleSelect={toggleRefImage} />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {conceptRefTab === "moodboard" && (
+                    <MoodBoardUploader
+                      onPagesReady={(pages) => setMoodBoardRefs(pages)}
+                    />
+                  )}
+                </div>
               </>
             )}
 
