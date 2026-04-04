@@ -293,6 +293,27 @@ const GeneratePage = () => {
               />
             </div>
 
+            {/* Output Style */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground font-body">Output Style</label>
+              <div className="grid grid-cols-4 gap-1.5">
+                {OUTPUT_STYLES.map((s) => (
+                  <button
+                    key={s.value}
+                    onClick={() => setOutputStyle(s.value)}
+                    className={`px-2 py-2 rounded-lg text-center text-[11px] font-body transition-all ${
+                      outputStyle === s.value
+                        ? "bg-primary/15 border border-primary text-primary"
+                        : "border border-border text-muted-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    <div className="font-medium">{s.label}</div>
+                    <div className="text-[9px] opacity-60 mt-0.5">{s.desc}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Style Tags */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-foreground font-body">
