@@ -121,7 +121,7 @@ const DesignResults = ({
             <div
               key={item.id}
               className={`group relative rounded-lg overflow-hidden border bg-card animate-fade-in transition-all ${
-                item.selected ? "border-primary ring-1 ring-primary/30" : "border-border"
+                item.selected ? "border-primary ring-1 ring-primary/30" : focusedDesignId === item.id ? "border-primary/60 ring-1 ring-primary/20" : "border-border"
               }`}
             >
               <div
