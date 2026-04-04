@@ -253,7 +253,10 @@ const GeneratePage = () => {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground font-body">Prompt</label>
-                <AiImproveButton text={prompt} context="design-prompt" onImproved={setPrompt} />
+                <div className="flex items-center gap-1.5">
+                  <VoiceToTextButton onTranscript={(t) => setPrompt((prev) => (prev ? prev + " " + t : t))} />
+                  <AiImproveButton text={prompt} context="design-prompt" onImproved={setPrompt} />
+                </div>
               </div>
               <textarea
                 value={prompt}
