@@ -328,6 +328,7 @@ const GeneratePage = () => {
     concept: "Generate Concepts",
     design: "Refine Designs",
     realistic: "Render Realistic",
+    moodboard: "Generate Mood Board",
   };
 
   if (loadingProject) {

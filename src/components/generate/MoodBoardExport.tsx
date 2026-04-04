@@ -14,6 +14,7 @@ const STAGE_LABELS: Record<DesignStage, string> = {
   concept: "Concepts",
   design: "Design Details",
   realistic: "Final Renders",
+  moodboard: "Mood Board",
 };
 
 const MoodBoardExport = ({ designs, projectName, masterPrompt, onClose }: MoodBoardExportProps) => {

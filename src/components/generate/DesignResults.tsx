@@ -22,6 +22,7 @@ const stageLabels: Record<DesignStage, string> = {
   concept: "Concepts",
   design: "Refined Designs",
   realistic: "Realistic Renders",
+  moodboard: "Mood Board",
 };
 
 const DesignResults = ({
