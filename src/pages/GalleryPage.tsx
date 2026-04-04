@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   Upload,
   ImageIcon,
@@ -12,12 +12,14 @@ import {
 import Layout from "@/components/Layout";
 import ImageCard from "@/components/ImageCard";
 import { supabase } from "@/integrations/supabase/client";
+import { collectionsApi } from "@/lib/collectionsApi";
 import { toast } from "sonner";
 import type { GalleryImage, Annotation, Collection } from "@/types/gallery";
 
 const GalleryPage = () => {
   const [collections, setCollections] = useState<Collection[]>([]);
   const [activeCollectionId, setActiveCollectionId] = useState<string | null>(null);
+  const [loadingCollections, setLoadingCollections] = useState(true);
   const [showNewCollection, setShowNewCollection] = useState(false);
   const [newCollectionName, setNewCollectionName] = useState("");
   const [newCollectionDesc, setNewCollectionDesc] = useState("");
@@ -28,7 +30,36 @@ const GalleryPage = () => {
 
   const activeCollection = collections.find((c) => c.id === activeCollectionId) || null;
 
-  // --- helpers ---
+  // Load collections from DB
+  const loadCollections = useCallback(async () => {
+    try {
+      const data = await collectionsApi.list();
+      setCollections(data);
+    } catch (err) {
+      console.error("Failed to load collections:", err);
+    } finally {
+      setLoadingCollections(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadCollections();
+  }, [loadCollections]);
+
+  // Reload active collection images
+  const reloadActiveImages = useCallback(async () => {
+    if (!activeCollectionId) return;
+    try {
+      const images = await collectionsApi.getCollectionImages(activeCollectionId);
+      setCollections((prev) =>
+        prev.map((c) => (c.id === activeCollectionId ? { ...c, images } : c))
+      );
+    } catch (err) {
+      console.error(err);
+    }
+  }, [activeCollectionId]);
+
+  // Duplicate check
   const getImageKey = (src: string, name: string) => {
     try {
       return new URL(src).pathname;
@@ -37,65 +68,73 @@ const GalleryPage = () => {
     }
   };
 
-  const updateCollectionImages = (
-    collectionId: string,
-    updater: (images: GalleryImage[]) => GalleryImage[]
-  ) => {
-    setCollections((prev) =>
-      prev.map((c) =>
-        c.id === collectionId ? { ...c, images: updater(c.images) } : c
-      )
-    );
-  };
-
   // --- collection CRUD ---
-  const handleCreateCollection = () => {
+  const handleCreateCollection = async () => {
     if (!newCollectionName.trim()) return;
-    const col: Collection = {
-      id: crypto.randomUUID(),
-      name: newCollectionName.trim(),
-      description: newCollectionDesc.trim() || undefined,
-      images: [],
-      createdAt: new Date().toISOString(),
-    };
-    setCollections((prev) => [...prev, col]);
-    setActiveCollectionId(col.id);
-    setNewCollectionName("");
-    setNewCollectionDesc("");
-    setShowNewCollection(false);
-    toast.success(`Collection "${col.name}" created`);
+    try {
+      const col = await collectionsApi.create(
+        newCollectionName.trim(),
+        newCollectionDesc.trim() || undefined
+      );
+      setCollections((prev) => [col, ...prev]);
+      setActiveCollectionId(col.id);
+      setNewCollectionName("");
+      setNewCollectionDesc("");
+      setShowNewCollection(false);
+      toast.success(`Collection "${col.name}" created`);
+    } catch (err: any) {
+      toast.error(err.message || "Failed to create collection");
+    }
   };
 
-  const handleDeleteCollection = (id: string) => {
-    setCollections((prev) => prev.filter((c) => c.id !== id));
-    if (activeCollectionId === id) setActiveCollectionId(null);
-    toast.success("Collection deleted");
+  const handleDeleteCollection = async (id: string) => {
+    try {
+      await collectionsApi.deleteCollection(id);
+      setCollections((prev) => prev.filter((c) => c.id !== id));
+      if (activeCollectionId === id) setActiveCollectionId(null);
+      toast.success("Collection deleted");
+    } catch (err: any) {
+      toast.error(err.message || "Failed to delete");
+    }
   };
 
-  // --- image upload into active collection ---
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // --- image upload ---
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!activeCollectionId) return;
     const files = e.target.files;
     if (!files) return;
 
-    Array.from(files).forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        const src = ev.target?.result as string;
-        updateCollectionImages(activeCollectionId, (imgs) => {
-          if (imgs.some((img) => img.name === file.name)) return imgs;
-          return [
-            ...imgs,
-            { id: crypto.randomUUID(), src, name: file.name, annotations: [] },
-          ];
-        });
-      };
-      reader.readAsDataURL(file);
-    });
+    const existingKeys = new Set(
+      (activeCollection?.images || []).map((img) => getImageKey(img.src, img.name))
+    );
+
+    for (const file of Array.from(files)) {
+      if (existingKeys.has(file.name)) continue;
+
+      const src = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (ev) => resolve(ev.target?.result as string);
+        reader.readAsDataURL(file);
+      });
+
+      try {
+        const saved = await collectionsApi.addImage(activeCollectionId, src, file.name);
+        setCollections((prev) =>
+          prev.map((c) =>
+            c.id === activeCollectionId
+              ? { ...c, images: [...c.images, saved] }
+              : c
+          )
+        );
+        existingKeys.add(file.name);
+      } catch (err) {
+        console.error("Upload error:", err);
+      }
+    }
     e.target.value = "";
   };
 
-  // --- scrape into active collection ---
+  // --- scrape ---
   const handleScrapeStore = async () => {
     if (!scrapeUrl.trim() || !activeCollectionId) return;
     setScraping(true);
@@ -106,74 +145,68 @@ const GalleryPage = () => {
       });
       if (error) throw error;
 
-      const scraped =
-        (data?.images as { src: string; description: string }[]) || [];
+      const scraped = (data?.images as { src: string; description: string }[]) || [];
       if (scraped.length === 0) {
         toast.info("No images found on this page");
         setScraping(false);
         return;
       }
 
+      const existingKeys = new Set(
+        (activeCollection?.images || []).map((img) => getImageKey(img.src, img.name))
+      );
+
       let addedCount = 0;
       let skippedCount = 0;
 
-      updateCollectionImages(activeCollectionId, (imgs) => {
-        const existingKeys = new Set(
-          imgs.map((img) => getImageKey(img.src, img.name))
-        );
-        const newImages: GalleryImage[] = [];
+      for (const img of scraped) {
+        const key = getImageKey(img.src, img.src.split("/").pop() || "image");
+        if (existingKeys.has(key)) {
+          skippedCount++;
+          continue;
+        }
+        existingKeys.add(key);
 
-        for (const img of scraped) {
-          const key = getImageKey(
-            img.src,
-            img.src.split("/").pop() || "image"
-          );
-          if (existingKeys.has(key)) {
-            skippedCount++;
-            continue;
-          }
-          existingKeys.add(key);
+        const fileName = img.src.split("/").pop()?.split("?")[0] || "image";
 
-          const fileName =
-            img.src.split("/").pop()?.split("?")[0] || "image";
-
-          // Split description into multiple annotations spread across the image
-          const annotations: Annotation[] = [];
-          if (img.description) {
-            const parts = img.description
-              .split(/\s*[—|]\s*/)
-              .map((s: string) => s.trim())
-              .filter((s: string) => s.length > 2);
-
-            const positions = [
-              { x: 50, y: 15 },
-              { x: 50, y: 40 },
-              { x: 50, y: 65 },
-              { x: 50, y: 85 },
-              { x: 25, y: 50 },
-            ];
-
-            parts.slice(0, 5).forEach((text: string, i: number) => {
-              annotations.push({
-                id: crypto.randomUUID(),
-                text,
-                x: positions[i].x,
-                y: positions[i].y,
-              });
-            });
-          }
-
-          newImages.push({
-            id: crypto.randomUUID(),
-            src: img.src,
-            name: fileName,
-            annotations,
+        // Build annotations from description
+        const annotations: Omit<Annotation, "id">[] = [];
+        if (img.description) {
+          const parts = img.description
+            .split(/\s*[—|]\s*/)
+            .map((s) => s.trim())
+            .filter((s) => s.length > 2);
+          const positions = [
+            { x: 50, y: 15 },
+            { x: 50, y: 40 },
+            { x: 50, y: 65 },
+            { x: 50, y: 85 },
+            { x: 25, y: 50 },
+          ];
+          parts.slice(0, 5).forEach((text, i) => {
+            annotations.push({ text, x: positions[i].x, y: positions[i].y });
           });
-          addedCount++;
         }
 
-        return [...imgs, ...newImages];
-      });
+        try {
+          const saved = await collectionsApi.addImage(
+            activeCollectionId,
+            img.src,
+            fileName,
+            annotations
+          );
+          setCollections((prev) =>
+            prev.map((c) =>
+              c.id === activeCollectionId
+                ? { ...c, images: [...c.images, saved] }
+                : c
+            )
+          );
+          addedCount++;
+        } catch (err) {
+          console.error("Failed to save image:", err);
+        }
+      }
 
       toast.success(
         `Added ${addedCount} images${skippedCount > 0 ? `, ${skippedCount} duplicates skipped` : ""}`
@@ -189,41 +222,83 @@ const GalleryPage = () => {
   };
 
   // --- annotation & delete ---
-  const handleAddAnnotation = (imageId: string, annotation: Annotation) => {
-    if (!activeCollectionId) return;
-    updateCollectionImages(activeCollectionId, (imgs) =>
-      imgs.map((img) =>
-        img.id === imageId
-          ? { ...img, annotations: [...img.annotations, annotation] }
-          : img
-      )
-    );
+  const handleAddAnnotation = async (imageId: string, annotation: Annotation) => {
+    try {
+      const saved = await collectionsApi.addAnnotation(
+        imageId,
+        annotation.text,
+        annotation.x,
+        annotation.y
+      );
+      setCollections((prev) =>
+        prev.map((c) =>
+          c.id === activeCollectionId
+            ? {
+                ...c,
+                images: c.images.map((img) =>
+                  img.id === imageId
+                    ? { ...img, annotations: [...img.annotations, saved] }
+                    : img
+                ),
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to save annotation");
+    }
   };
 
-  const handleRemoveAnnotation = (imageId: string, annotationId: string) => {
-    if (!activeCollectionId) return;
-    updateCollectionImages(activeCollectionId, (imgs) =>
-      imgs.map((img) =>
-        img.id === imageId
-          ? {
-              ...img,
-              annotations: img.annotations.filter((a) => a.id !== annotationId),
-            }
-          : img
-      )
-    );
+  const handleRemoveAnnotation = async (imageId: string, annotationId: string) => {
+    try {
+      await collectionsApi.removeAnnotation(annotationId);
+      setCollections((prev) =>
+        prev.map((c) =>
+          c.id === activeCollectionId
+            ? {
+                ...c,
+                images: c.images.map((img) =>
+                  img.id === imageId
+                    ? { ...img, annotations: img.annotations.filter((a) => a.id !== annotationId) }
+                    : img
+                ),
+              }
+            : c
+        )
+      );
+    } catch (err) {
+      console.error(err);
+    }
   };
 
-  const handleDeleteImage = (imageId: string) => {
-    if (!activeCollectionId) return;
-    updateCollectionImages(activeCollectionId, (imgs) =>
-      imgs.filter((img) => img.id !== imageId)
-    );
+  const handleDeleteImage = async (imageId: string) => {
+    try {
+      await collectionsApi.deleteImage(imageId);
+      setCollections((prev) =>
+        prev.map((c) =>
+          c.id === activeCollectionId
+            ? { ...c, images: c.images.filter((img) => img.id !== imageId) }
+            : c
+        )
+      );
+    } catch (err: any) {
+      toast.error("Failed to delete image");
+    }
   };
 
-  // ========== RENDER ==========
+  // ========== LOADING ==========
+  if (loadingCollections) {
+    return (
+      <Layout>
+        <div className="container py-10 flex items-center justify-center min-h-[60vh]">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        </div>
+      </Layout>
+    );
+  }
 
-  // --- Collections overview ---
+  // ========== COLLECTIONS OVERVIEW ==========
   if (!activeCollection) {
     return (
       <Layout>
@@ -246,7 +321,6 @@ const GalleryPage = () => {
             </button>
           </div>
 
-          {/* New collection form */}
           {showNewCollection && (
             <div className="mb-6 p-5 rounded-lg border border-border bg-card animate-fade-in">
               <p className="text-sm font-medium text-foreground mb-3 font-body">
@@ -288,7 +362,6 @@ const GalleryPage = () => {
             </div>
           )}
 
-          {/* Collection cards */}
           {collections.length === 0 && !showNewCollection ? (
             <div
               onClick={() => setShowNewCollection(true)}
@@ -312,7 +385,6 @@ const GalleryPage = () => {
                   onClick={() => setActiveCollectionId(col.id)}
                   className="group relative rounded-lg border border-border bg-card p-5 cursor-pointer hover:border-primary/40 transition-all"
                 >
-                  {/* Preview thumbnails */}
                   <div className="grid grid-cols-2 gap-1 mb-4 aspect-square rounded-md overflow-hidden bg-secondary">
                     {col.images.slice(0, 4).map((img) => (
                       <img
@@ -328,7 +400,6 @@ const GalleryPage = () => {
                       </div>
                     )}
                   </div>
-
                   <h3 className="text-foreground font-medium text-sm font-body truncate">
                     {col.name}
                   </h3>
@@ -340,8 +411,6 @@ const GalleryPage = () => {
                   <p className="text-muted-foreground text-xs mt-1 font-body">
                     {col.images.length} image{col.images.length !== 1 ? "s" : ""}
                   </p>
-
-                  {/* Delete */}
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -354,8 +423,6 @@ const GalleryPage = () => {
                   </button>
                 </div>
               ))}
-
-              {/* Add collection card */}
               <div
                 onClick={() => setShowNewCollection(true)}
                 className="rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center py-16 cursor-pointer hover:border-primary/40 hover:text-primary text-muted-foreground transition-colors"
@@ -370,11 +437,10 @@ const GalleryPage = () => {
     );
   }
 
-  // --- Single collection view ---
+  // ========== SINGLE COLLECTION VIEW ==========
   return (
     <Layout>
       <div className="container py-10">
-        {/* Header */}
         <div className="flex items-end justify-between mb-8">
           <div className="flex items-center gap-3">
             <button
@@ -424,12 +490,10 @@ const GalleryPage = () => {
           />
         </div>
 
-        {/* Scraper */}
         {showScraper && (
           <div className="mb-6 p-4 rounded-lg border border-border bg-card animate-fade-in">
             <p className="text-sm text-foreground font-medium mb-2 font-body">
-              Enter an online store URL to extract product images into this
-              collection
+              Enter an online store URL to extract product images into this collection
             </p>
             <div className="flex gap-2">
               <input
@@ -458,7 +522,6 @@ const GalleryPage = () => {
           </div>
         )}
 
-        {/* Images */}
         {activeCollection.images.length === 0 ? (
           <div
             onClick={() => fileInputRef.current?.click()}
@@ -471,8 +534,7 @@ const GalleryPage = () => {
               Drop images here or click to upload
             </p>
             <p className="text-muted-foreground text-sm mt-1 font-body">
-              PNG, JPG up to 10MB each — or use Scrape Store to import from a
-              URL
+              PNG, JPG up to 10MB each — or use Scrape Store to import from a URL
             </p>
           </div>
         ) : (
