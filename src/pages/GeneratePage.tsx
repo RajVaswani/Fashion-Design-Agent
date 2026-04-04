@@ -679,7 +679,42 @@ const GeneratePage = () => {
             </button>
           </div>
 
-          <div>
+          <div className="space-y-4">
+            {/* Focused design panel — shown when user clicks a shortlisted image */}
+            {stage !== "concept" && (() => {
+              const prevStage = stage === "design" ? "concept" : "design";
+              const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
+              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
+              if (!focusedDesign) return null;
+              return (
+                <div className="border border-primary/30 rounded-xl bg-card p-3 space-y-2 animate-fade-in">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-display font-bold text-foreground">Improving this design</h3>
+                    <button onClick={() => setFocusedDesignId(null)} className="text-[10px] text-muted-foreground hover:text-foreground font-body">Clear focus</button>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <div className="w-28 h-36 rounded-lg overflow-hidden border border-border flex-shrink-0">
+                      <img src={focusedDesign.url} alt={focusedDesign.prompt} className="w-full h-full object-cover" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-1.5">
+                      <p className="text-[11px] text-muted-foreground font-body">Original: {focusedDesign.prompt}</p>
+                      {focusedDesign.notes && (
+                        <p className="text-[10px] text-accent-foreground/70 bg-accent/30 rounded px-1.5 py-0.5 line-clamp-2 font-body">
+                          Notes: {focusedDesign.notes}
+                        </p>
+                      )}
+                      {focusedDesign.citation && (
+                        <p className="text-[10px] text-muted-foreground font-body line-clamp-2">Citation: {focusedDesign.citation}</p>
+                      )}
+                      <p className="text-[10px] text-primary font-body font-medium">
+                        Your prompt and tags will target this design specifically
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
+
             <DesignResults
               designs={designs}
               stage={stage}
