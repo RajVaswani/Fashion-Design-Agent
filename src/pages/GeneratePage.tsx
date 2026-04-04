@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Loader2, ChevronLeft } from "lucide-react";
 import AiImproveButton from "@/components/AiImproveButton";
+import VoiceToTextButton from "@/components/VoiceToTextButton";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import StageIndicator from "@/components/generate/StageIndicator";
@@ -252,7 +253,10 @@ const GeneratePage = () => {
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-medium text-foreground font-body">Prompt</label>
-                <AiImproveButton text={prompt} context="design-prompt" onImproved={setPrompt} />
+                <div className="flex items-center gap-1.5">
+                  <VoiceToTextButton onTranscript={(t) => setPrompt((prev) => (prev ? prev + " " + t : t))} />
+                  <AiImproveButton text={prompt} context="design-prompt" onImproved={setPrompt} />
+                </div>
               </div>
               <textarea
                 value={prompt}
