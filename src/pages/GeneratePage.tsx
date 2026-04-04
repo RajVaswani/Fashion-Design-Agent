@@ -649,7 +649,7 @@ const GeneratePage = () => {
             {stage !== "concept" && (() => {
               const prevStage = stage === "design" ? "concept" : "design";
               const prevSelected = designs.filter((d) => d.stage === prevStage && d.selected);
-              const focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
+              const _focusedDesign = focusedDesignId ? prevSelected.find((d) => d.id === focusedDesignId) : null;
               return (
                 <div className="space-y-2">
                   <label className="text-xs font-medium text-foreground font-body">
