@@ -149,17 +149,19 @@ const GeneratePage = () => {
       if (data?.images && data.images.length > 0) {
         const newDesigns: GeneratedDesign[] = [];
         for (const img of data.images) {
+          const imageUrl = img.url || img.image_url?.url;
+          if (!imageUrl) continue;
           if (projectId) {
             const saved = await projectsApi.saveDesign(projectId, {
               prompt: prompt.trim(),
-              imageUrl: img.image_url.url,
+              imageUrl,
               stage,
             });
             newDesigns.push(saved);
           } else {
             newDesigns.push({
               id: crypto.randomUUID(),
-              url: img.image_url.url,
+              url: imageUrl,
               prompt: prompt.trim(),
               stage,
               selected: false,
