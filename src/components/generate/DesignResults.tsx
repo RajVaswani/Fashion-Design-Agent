@@ -47,7 +47,7 @@ const DesignResults = ({
 
   const stageDesigns = designs.filter((d) => d.stage === stage);
   const selectedCount = stageDesigns.filter((d) => d.selected).length;
-  const nextStage: DesignStage | null = stage === "concept" ? "design" : stage === "design" ? "realistic" : null;
+  const nextStage: DesignStage | null = stage === "concept" ? "design" : stage === "design" ? "realistic" : stage === "realistic" ? "moodboard" : null;
 
   const openNoteEditor = (design: GeneratedDesign) => {
     setEditingNoteId(design.id);
