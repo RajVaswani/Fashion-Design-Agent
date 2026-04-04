@@ -21,7 +21,7 @@ export interface Collection {
   createdAt: string;
 }
 
-export type DesignStage = "concept" | "design" | "realistic";
+export type DesignStage = "concept" | "design" | "realistic" | "moodboard";
 
 export interface GeneratedDesign {
   id: string;
