@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
-import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText } from "lucide-react";
+import { Sparkles, Download, Check, X, ZoomIn, StickyNote, FileText, Loader2 } from "lucide-react";
 import type { GeneratedDesign, DesignStage } from "@/types/gallery";
 import { projectsApi } from "@/lib/projectsApi";
+import { Skeleton } from "@/components/ui/skeleton";
 
 interface DesignResultsProps {
   designs: GeneratedDesign[];
@@ -10,6 +11,7 @@ interface DesignResultsProps {
   onToggleSelect: (id: string) => void;
   onPromoteSelected: () => void;
   onUpdateNotes?: (id: string, notes: string) => void;
+  isGenerating?: boolean;
 }
 
 const stageLabels: Record<DesignStage, string> = {
