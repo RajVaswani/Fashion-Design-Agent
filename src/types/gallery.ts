@@ -20,3 +20,13 @@ export interface Collection {
   images: GalleryImage[];
   createdAt: string;
 }
+
+export type DesignStage = "concept" | "design" | "realistic";
+
+export interface GeneratedDesign {
+  id: string;
+  url: string;
+  prompt: string;
+  stage: DesignStage;
+  selected?: boolean;
+}
