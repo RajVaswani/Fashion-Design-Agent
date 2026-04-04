@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Sparkles, Loader2, ChevronLeft } from "lucide-react";
 import AiImproveButton from "@/components/AiImproveButton";
+import VoiceToTextButton from "@/components/VoiceToTextButton";
 import { useParams, useNavigate } from "react-router-dom";
 import Layout from "@/components/Layout";
 import StageIndicator from "@/components/generate/StageIndicator";
