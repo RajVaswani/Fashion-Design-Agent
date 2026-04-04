@@ -103,6 +103,7 @@ const GalleryPage = () => {
                 image={img}
                 onAddAnnotation={handleAddAnnotation}
                 onRemoveAnnotation={handleRemoveAnnotation}
+                onDelete={handleDeleteImage}
               />
             ))}
             {/* Add more card */}
