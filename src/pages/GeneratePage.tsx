@@ -734,21 +734,19 @@ const GeneratePage = () => {
               );
             })()}
 
-            {stage !== "moodboard" && (
-              <DesignResults
-                designs={designs}
-                stage={stage}
-                selectable={stage !== "moodboard"}
-                onToggleSelect={toggleDesignSelect}
-                onPromoteSelected={handlePromoteSelected}
-                onUpdateNotes={handleUpdateNotes}
-                onDeleteDesign={handleDeleteDesign}
-                onEnhanceDesign={handleEnhanceDesign}
-                onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
-                focusedDesignId={focusedDesignId}
-                isGenerating={isGenerating}
-              />
-            )}
+            <DesignResults
+              designs={designs}
+              stage={stage}
+              selectable
+              onToggleSelect={toggleDesignSelect}
+              onPromoteSelected={handlePromoteSelected}
+              onUpdateNotes={handleUpdateNotes}
+              onDeleteDesign={handleDeleteDesign}
+              onEnhanceDesign={handleEnhanceDesign}
+              onFocusDesign={(id) => setFocusedDesignId(focusedDesignId === id ? null : id)}
+              focusedDesignId={focusedDesignId}
+              isGenerating={isGenerating}
+            />
           </div>
         </div>
         )}
