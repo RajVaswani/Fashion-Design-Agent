@@ -1,47 +1,78 @@
 import { useState, useEffect } from "react";
-import { Sparkles, Loader2, ImageIcon, Download, FolderOpen } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import Layout from "@/components/Layout";
+import StageIndicator from "@/components/generate/StageIndicator";
+import CollectionSelector from "@/components/generate/CollectionSelector";
+import DesignResults from "@/components/generate/DesignResults";
 import ImageCard from "@/components/ImageCard";
 import { collectionsApi } from "@/lib/collectionsApi";
-import type { GalleryImage, Collection } from "@/types/gallery";
+import type { GalleryImage, Collection, DesignStage, GeneratedDesign } from "@/types/gallery";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
+const stagePromptHints: Record<DesignStage, string> = {
+  concept:
+    "Describe the clothing design concept… e.g. 'A flowing silk evening gown with geometric Art Deco patterns in emerald green'",
+  design:
+    "Refine the selected concepts… e.g. 'Add intricate beading along the neckline, make the silhouette more fitted, use a matte fabric'",
+  realistic:
+    "Describe the final look… e.g. 'Show on a female model, studio lighting, white background, e-commerce product photo'",
+};
+
 const GeneratePage = () => {
+  const [stage, setStage] = useState<DesignStage>("concept");
   const [prompt, setPrompt] = useState("");
   const [collections, setCollections] = useState<Collection[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(null);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [referenceImages, setReferenceImages] = useState<GalleryImage[]>([]);
-  const [generatedImages, setGeneratedImages] = useState<{ url: string; prompt: string }[]>([]);
+  const [designs, setDesigns] = useState<GeneratedDesign[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingCollections, setLoadingCollections] = useState(true);
 
   // Load collections
   useEffect(() => {
-    collectionsApi.list().then((data) => {
-      setCollections(data);
-      setLoadingCollections(false);
-    }).catch(() => setLoadingCollections(false));
+    collectionsApi
+      .list()
+      .then((data) => {
+        setCollections(data);
+        setLoadingCollections(false);
+      })
+      .catch(() => setLoadingCollections(false));
   }, []);
 
-  // When a collection is selected, load its images as references
+  // Build reference images from selected collections
   useEffect(() => {
-    if (!selectedCollectionId) {
-      setReferenceImages([]);
-      return;
+    const imgs: GalleryImage[] = [];
+    for (const id of selectedCollectionIds) {
+      const col = collections.find((c) => c.id === id);
+      if (col) imgs.push(...col.images.map((img) => ({ ...img, selected: true })));
     }
-    const col = collections.find((c) => c.id === selectedCollectionId);
-    if (col) {
-      setReferenceImages(col.images.map((img) => ({ ...img, selected: true })));
-    }
-  }, [selectedCollectionId, collections]);
+    setReferenceImages(imgs);
+  }, [selectedCollectionIds, collections]);
 
-  const toggleSelect = (id: string) => {
-    setReferenceImages((prev) =>
-      prev.map((img) =>
-        img.id === id ? { ...img, selected: !img.selected } : img
-      )
+  const toggleCollection = (id: string) => {
+    setSelectedCollectionIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
+  };
+
+  const toggleRefImage = (id: string) => {
+    setReferenceImages((prev) =>
+      prev.map((img) => (img.id === id ? { ...img, selected: !img.selected } : img))
+    );
+  };
+
+  const toggleDesignSelect = (id: string) => {
+    setDesigns((prev) =>
+      prev.map((d) => (d.id === id ? { ...d, selected: !d.selected } : d))
+    );
+  };
+
+  const handlePromoteSelected = () => {
+    // Move selected designs from current stage to next as "reference" for generation
+    const nextStage: DesignStage = stage === "concept" ? "design" : "realistic";
+    setStage(nextStage);
+    toast.success(`Moved to ${nextStage} stage — refine with a new prompt`);
   };
 
   const handleGenerate = async () => {
@@ -50,43 +81,68 @@ const GeneratePage = () => {
       return;
     }
 
+    // For concept stage, need reference collection images
     const selectedRefs = referenceImages.filter((img) => img.selected);
-    if (selectedRefs.length === 0) {
-      toast.error("Please select at least one reference image");
+    // For design/realistic stages, use selected designs from previous stage as references
+    const previousStage: DesignStage | null =
+      stage === "design" ? "concept" : stage === "realistic" ? "design" : null;
+    const selectedPrevDesigns = previousStage
+      ? designs.filter((d) => d.stage === previousStage && d.selected)
+      : [];
+
+    if (stage === "concept" && selectedRefs.length === 0) {
+      toast.error("Please select at least one reference collection");
+      return;
+    }
+    if (stage !== "concept" && selectedPrevDesigns.length === 0 && selectedRefs.length === 0) {
+      toast.error("Please select designs from the previous stage to refine");
       return;
     }
 
     setIsGenerating(true);
 
     try {
-      // Build context from annotations
+      // Build annotation context from reference images
       const annotationContext = selectedRefs
         .flatMap((img) => img.annotations.map((a) => a.text))
         .filter((t) => t.length > 0)
         .join("; ");
 
-      const fullPrompt = annotationContext
-        ? `${prompt.trim()}\n\nReference design notes: ${annotationContext}`
-        : prompt.trim();
+      // Collect image URLs to send — reference images + selected previous designs
+      const imageUrls: string[] = [
+        ...selectedRefs.slice(0, 4).map((img) => img.src),
+        ...selectedPrevDesigns.slice(0, 4).map((d) => d.url),
+      ].slice(0, 8); // max 8 images
 
       const { data, error } = await supabase.functions.invoke("generate-design", {
         body: {
-          prompt: fullPrompt,
-          referenceImages: selectedRefs.slice(0, 4).map((img) => img.src),
+          prompt: prompt.trim(),
+          referenceImages: imageUrls,
+          annotationContext,
+          stage,
         },
       });
 
       if (error) throw error;
 
       if (data?.images && data.images.length > 0) {
-        const newImages = data.images.map(
+        const newDesigns: GeneratedDesign[] = data.images.map(
           (img: { image_url: { url: string } }) => ({
+            id: crypto.randomUUID(),
             url: img.image_url.url,
             prompt: prompt.trim(),
+            stage,
+            selected: false,
           })
         );
-        setGeneratedImages((prev) => [...newImages, ...prev]);
-        toast.success("Design generated!");
+        setDesigns((prev) => [...newDesigns, ...prev]);
+        toast.success(
+          stage === "concept"
+            ? "Concepts generated! Select your favorites to refine."
+            : stage === "design"
+            ? "Designs refined! Select the best to render realistically."
+            : "Realistic renders ready!"
+        );
       } else {
         toast.error("No image was generated. Try a different prompt.");
       }
@@ -98,95 +154,129 @@ const GeneratePage = () => {
     }
   };
 
+  const stageButtonLabel: Record<DesignStage, string> = {
+    concept: "Generate Concepts",
+    design: "Refine Designs",
+    realistic: "Render Realistic",
+  };
+
   return (
     <Layout>
-      <div className="container py-10">
+      <div className="container py-8">
+        {/* Stage indicator */}
+        <div className="mb-6">
+          <StageIndicator current={stage} onChange={setStage} />
+        </div>
+
         <div className="grid lg:grid-cols-[1fr_1.2fr] gap-8">
           {/* Left: Controls */}
-          <div className="space-y-6">
+          <div className="space-y-5">
             <div>
-              <h1 className="text-3xl font-display font-bold text-foreground">
-                Design <span className="text-gradient-gold">Generator</span>
+              <h1 className="text-2xl font-display font-bold text-foreground">
+                {stage === "concept" && (
+                  <>
+                    Design <span className="text-gradient-gold">Concepts</span>
+                  </>
+                )}
+                {stage === "design" && (
+                  <>
+                    Refine <span className="text-gradient-gold">Design</span>
+                  </>
+                )}
+                {stage === "realistic" && (
+                  <>
+                    Realistic <span className="text-gradient-gold">Renders</span>
+                  </>
+                )}
               </h1>
-              <p className="text-muted-foreground text-sm mt-1 font-body">
-                Select a collection and describe your new design
+              <p className="text-muted-foreground text-xs mt-1 font-body">
+                {stage === "concept" && "Select collections and describe your vision"}
+                {stage === "design" && "Pick your favorite concepts and add detail"}
+                {stage === "realistic" && "Select refined designs for photorealistic output"}
               </p>
             </div>
 
             {/* Prompt */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground font-body">
-                Design Prompt
-              </label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground font-body">Prompt</label>
               <textarea
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Describe the clothing design you want to create... e.g. 'A flowing silk evening gown with geometric patterns inspired by Art Deco, in deep emerald green'"
-                className="w-full h-32 bg-card border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
+                placeholder={stagePromptHints[stage]}
+                className="w-full h-28 bg-card border border-border rounded-lg p-3 text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-primary font-body"
               />
             </div>
 
-            {/* Collection selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground font-body">
-                Reference Collection
+            {/* Collection selector — always visible for brand context */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-foreground font-body">
+                Reference Collections
+                {selectedCollectionIds.length > 0 && (
+                  <span className="text-primary ml-1">({selectedCollectionIds.length})</span>
+                )}
               </label>
-              {loadingCollections ? (
-                <div className="flex items-center gap-2 text-muted-foreground text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Loading collections…
-                </div>
-              ) : collections.length === 0 ? (
-                <div className="border border-dashed border-border rounded-lg p-6 text-center">
-                  <FolderOpen className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
-                  <p className="text-sm text-muted-foreground font-body">
-                    No collections yet. Go to the Gallery to create one.
-                  </p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-2">
-                  {collections.map((col) => (
-                    <button
-                      key={col.id}
-                      onClick={() =>
-                        setSelectedCollectionId(
-                          selectedCollectionId === col.id ? null : col.id
-                        )
-                      }
-                      className={`text-left p-3 rounded-lg border transition-all ${
-                        selectedCollectionId === col.id
-                          ? "border-primary bg-primary/10"
-                          : "border-border hover:border-primary/40"
-                      }`}
-                    >
-                      <p className="text-sm font-medium text-foreground font-body truncate">
-                        {col.name}
-                      </p>
-                      <p className="text-xs text-muted-foreground font-body">
-                        {col.images.length} image{col.images.length !== 1 ? "s" : ""}
-                      </p>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <CollectionSelector
+                collections={collections}
+                selectedIds={selectedCollectionIds}
+                onToggle={toggleCollection}
+                loading={loadingCollections}
+                onCollectionCreated={(col) => {
+                  setCollections((prev) => [col, ...prev]);
+                  setSelectedCollectionIds((prev) => [...prev, col.id]);
+                }}
+              />
             </div>
 
-            {/* Selected reference images */}
+            {/* Selected reference images preview */}
             {referenceImages.length > 0 && (
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-foreground font-body">
-                  Reference Images ({referenceImages.filter((i) => i.selected).length} selected)
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground font-body">
+                  Reference Images ({referenceImages.filter((i) => i.selected).length}/{referenceImages.length})
                 </label>
-                <div className="grid grid-cols-4 gap-2 max-h-48 overflow-y-auto">
+                <div className="grid grid-cols-5 gap-1.5 max-h-36 overflow-y-auto">
                   {referenceImages.map((img) => (
                     <ImageCard
                       key={img.id}
                       image={img}
                       selectable
-                      onToggleSelect={toggleSelect}
+                      onToggleSelect={toggleRefImage}
                     />
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Previous stage selections for design/realistic */}
+            {stage !== "concept" && (
+              <div className="space-y-1.5">
+                <label className="text-xs font-medium text-foreground font-body">
+                  Selected from {stage === "design" ? "Concepts" : "Designs"} (
+                  {designs.filter(
+                    (d) =>
+                      d.stage === (stage === "design" ? "concept" : "design") && d.selected
+                  ).length}
+                  )
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 max-h-32 overflow-y-auto">
+                  {designs
+                    .filter(
+                      (d) =>
+                        d.stage === (stage === "design" ? "concept" : "design") && d.selected
+                    )
+                    .map((d) => (
+                      <div key={d.id} className="rounded-md overflow-hidden border border-primary/30 aspect-[3/4]">
+                        <img src={d.url} alt={d.prompt} className="w-full h-full object-cover" />
+                      </div>
+                    ))}
+                </div>
+                {designs.filter(
+                  (d) =>
+                    d.stage === (stage === "design" ? "concept" : "design") && d.selected
+                ).length === 0 && (
+                  <p className="text-xs text-muted-foreground font-body">
+                    Go back to {stage === "design" ? "Concepts" : "Designs"} and select items to refine
+                  </p>
+                )}
               </div>
             )}
 
@@ -199,12 +289,12 @@ const GeneratePage = () => {
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating with Gemini Pro 3...
+                  Generating…
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  Generate Designs
+                  {stageButtonLabel[stage]}
                 </>
               )}
             </button>
@@ -212,46 +302,13 @@ const GeneratePage = () => {
 
           {/* Right: Results */}
           <div>
-            <h2 className="text-lg font-display font-semibold text-foreground mb-4">
-              Generated Designs
-            </h2>
-            {generatedImages.length === 0 ? (
-              <div className="border border-border rounded-xl flex flex-col items-center justify-center py-24 bg-card/50">
-                <Sparkles className="w-10 h-10 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground text-sm font-body">
-                  Your generated designs will appear here
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-2 gap-3">
-                {generatedImages.map((item, i) => (
-                  <div
-                    key={i}
-                    className="group relative rounded-lg overflow-hidden border border-border bg-card animate-fade-in"
-                  >
-                    <div className="aspect-[3/4]">
-                      <img
-                        src={item.url}
-                        alt={item.prompt}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="p-2 flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground truncate font-body max-w-[80%]">
-                        {item.prompt}
-                      </span>
-                      <a
-                        href={item.url}
-                        download={`design-${i}.png`}
-                        className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                      </a>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+            <DesignResults
+              designs={designs}
+              stage={stage}
+              selectable={stage !== "realistic"}
+              onToggleSelect={toggleDesignSelect}
+              onPromoteSelected={handlePromoteSelected}
+            />
           </div>
         </div>
       </div>
