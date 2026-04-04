@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/hooks/useAuth";
 import AuthPage from "./pages/AuthPage";
 import GalleryPage from "./pages/GalleryPage";
+import ProjectsPage from "./pages/ProjectsPage";
 import GeneratePage from "./pages/GeneratePage";
 import NotFound from "./pages/NotFound";
 
@@ -32,9 +33,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<GalleryPage />} />
+      <Route path="/" element={<Navigate to="/projects" replace />} />
+      <Route path="/gallery" element={<GalleryPage />} />
+      <Route path="/projects" element={<ProjectsPage />} />
+      <Route path="/projects/:projectId" element={<GeneratePage />} />
       <Route path="/generate" element={<GeneratePage />} />
-      <Route path="/auth" element={<Navigate to="/" replace />} />
+      <Route path="/auth" element={<Navigate to="/projects" replace />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
