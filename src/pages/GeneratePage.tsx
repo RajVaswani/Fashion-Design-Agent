@@ -23,12 +23,27 @@ const OUTPUT_STYLES = [
 ] as const;
 type OutputStyle = typeof OUTPUT_STYLES[number]["value"];
 
-const STYLE_TAGS = [
+const CONCEPT_STYLE_TAGS = [
   "Minimalist", "Avant-garde", "Streetwear", "Formal", "Bohemian",
   "Tailored fit", "Oversized", "Structured", "Draped", "Layered",
   "Silk", "Denim", "Wool", "Leather", "Cotton", "Linen",
   "Neutral tones", "Bold colors", "Monochrome", "Pastel", "Earth tones",
   "Embroidered", "Pleated", "Ruffled", "Cut-out", "Asymmetric",
+];
+
+const DESIGN_EDIT_TAGS = [
+  "Add stitching detail", "Refine neckline", "Adjust sleeve length", "Tighten fit",
+  "Loosen fit", "Add embellishments", "Change closure type", "Add pockets",
+  "Modify hem", "Add lining", "Change collar", "Add darts",
+  "Surface texture", "Pattern placement", "Topstitching", "Seam lines",
+];
+
+const REALISTIC_TAGS = [
+  "Front view", "Back view", "Side view", "3/4 angle", "Close-up detail",
+  "Studio lighting", "Natural light", "Dramatic lighting", "Soft lighting",
+  "White background", "Urban setting", "Nature setting", "Runway",
+  "Standing pose", "Walking pose", "Seated pose", "Dynamic pose",
+  "E-commerce style", "Editorial style", "Lookbook style", "Campaign style",
 ];
 
 const strengthLabels = ["Low", "Medium", "High"];
