@@ -164,4 +164,12 @@ export const projectsApi = {
       .eq("id", designId);
     if (error) throw error;
   },
+
+  async updateDesignNotes(designId: string, notes: string): Promise<void> {
+    const { error } = await supabase
+      .from("project_designs")
+      .update({ notes } as any)
+      .eq("id", designId);
+    if (error) throw error;
+  },
 };
