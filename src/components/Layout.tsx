@@ -17,11 +17,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="container flex items-center justify-between h-16">
           <Link to="/projects" className="flex items-center gap-2">
             <span className="text-gradient-gold font-display text-xl font-bold tracking-tight">
-              Atelier
+              Fashion Designer
             </span>
             <span className="text-muted-foreground text-sm font-body font-light tracking-widest uppercase">
-              Studio
+              Agent
             </span>
+
           </Link>
           <div className="flex items-center gap-1">
             <nav className="flex items-center gap-1">
